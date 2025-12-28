@@ -1,0 +1,7 @@
+{
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true // Opcional: para ocultar arquivos .pyc soltos
+  }
+  // ... outras configurações ...
+}

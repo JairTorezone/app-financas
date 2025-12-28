@@ -1,0 +1,358 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<style>
+    /* CSS dos Radio Buttons */
+    #id_is_parcelado, #id_is_terceiro {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 20px;
+        list-style: none !important;
+        padding-left: 0 !important;
+        margin-bottom: 5px;
+    }
+    #id_is_parcelado li, #id_is_terceiro li { display: flex; align-items: center; }
+    #id_is_parcelado li label, #id_is_terceiro li label { margin-left: 6px; font-weight: normal; cursor: pointer; }
+    input[type="radio"] { transform: scale(1.2); cursor: pointer; }
+
+    /* Campo Condicional */
+    .campo-condicional {
+        display: none;
+        margin-top: 5px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border-left: 4px solid #198754;
+    }
+
+    /* --- CSS DOS MODAIS MANUAIS (SEM BOOTSTRAP) --- */
+    .modal-custom-overlay {
+        display: none; /* Escondido por padrão */
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.6); /* Fundo escuro */
+        z-index: 9999; /* Acima de tudo */
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(2px);
+    }
+
+    .modal-custom-box {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        animation: aparecer 0.2s ease-out;
+    }
+
+    @keyframes aparecer {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-custom-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;
+    }
+    .modal-custom-title { font-size: 1.25rem; font-weight: bold; margin: 0; }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h4 class="mb-0 text-center">{{ titulo }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    {% for field in form %}
+                        {% if field.name == 'qtd_parcelas' or field.name == 'terceiro' %}
+                            {% elif field.name == 'is_parcelado' %}
+                            <div class="mb-3">
+                                <label class="form-label fw-bold d-block">{{ field.label }}</label>
+                                {{ field }} 
+                                <div id="div_qtd_parcelas" class="campo-condicional">
+                                    <label class="form-label small text-muted">Quantas vezes?</label>
+                                    {{ form.qtd_parcelas }}
+                                </div>
+                            </div>
+
+                        {% elif field.name == 'is_terceiro' %}
+                            <div class="mb-3">
+                                <label class="form-label fw-bold d-block">{{ field.label }}</label>
+                                {{ field }} 
+                                <div id="div_terceiro" class="campo-condicional">
+                                    <label class="form-label small text-muted">Selecione a Pessoa:</label>
+                                    <div class="input-group">
+                                        {{ form.terceiro }}
+                                        <button type="button" class="btn btn-outline-success" onclick="abrirModal('modalNovoTerceiro')">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    {% if form.terceiro.errors %}
+                                        <div class="text-danger small">{{ form.terceiro.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                        {% else %}
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">{{ field.label }}</label>
+                                <div class="input-group">
+                                    {{ field }} 
+                                    {% if field.name == 'categoria' %}
+                                        <button type="button" class="btn btn-outline-primary" onclick="abrirModal('modalNovaCategoria')">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    {% endif %}
+                                    {% if field.name == 'cartao' %}
+                                        <button type="button" class="btn btn-outline-warning" onclick="abrirModal('modalNovoCartao')">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                                {% if field.errors %}
+                                    <div class="text-danger small">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-success">Salvar</button>
+                        <a href="{% url 'home' %}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modalNovoTerceiro" class="modal-custom-overlay">
+    <div class="modal-custom-box">
+        <div class="modal-custom-header">
+            <h5 class="modal-custom-title">Novo Terceiro</h5>
+            <button type="button" class="btn-close" onclick="fecharModal('modalNovoTerceiro')"></button>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Nome *</label>
+            <input type="text" id="novoNomeTerceiro" class="form-control" placeholder="Ex: Ana Silva">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Relacionamento (Opcional)</label>
+            <input type="text" id="novoRelacaoTerceiro" class="form-control" placeholder="Ex: Prima, Trabalho">
+        </div>
+        <div class="text-end">
+            <button type="button" class="btn btn-secondary" onclick="fecharModal('modalNovoTerceiro')">Cancelar</button>
+            <button type="button" class="btn btn-success" onclick="adicionarTerceiroJS()">Adicionar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalNovaCategoria" class="modal-custom-overlay">
+    <div class="modal-custom-box">
+        <div class="modal-custom-header">
+            <h5 class="modal-custom-title">Nova Categoria</h5>
+            <button type="button" class="btn-close" onclick="fecharModal('modalNovaCategoria')"></button>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Nome</label>
+            <input type="text" id="catNome" class="form-control" placeholder="Ex: Petshop">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Tipo</label>
+            <select id="catTipo" class="form-select">
+                <option value="D" {% if 'Despesa' in titulo %}selected{% endif %}>Despesa</option>
+                <option value="R" {% if 'Receita' in titulo %}selected{% endif %}>Receita</option>
+            </select>
+        </div>
+        <div class="text-end">
+            <button type="button" class="btn btn-secondary" onclick="fecharModal('modalNovaCategoria')">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="salvarCategoria()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalNovoCartao" class="modal-custom-overlay">
+    <div class="modal-custom-box">
+        <div class="modal-custom-header">
+            <h5 class="modal-custom-title">Novo Cartão</h5>
+            <button type="button" class="btn-close" onclick="fecharModal('modalNovoCartao')"></button>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Nome do Cartão</label>
+            <input type="text" id="cardNome" class="form-control" placeholder="Ex: Nubank">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Últimos 4 Dígitos</label>
+            <input type="text" id="cardDigitos" class="form-control" placeholder="Ex: 1234" maxlength="4">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Cor</label>
+            <select id="cardCor" class="form-select">
+                <option value="#820AD1">Roxo (Nubank)</option>
+                <option value="#FF8700">Laranja (Itaú)</option>
+                <option value="#CC092F">Vermelho (Bradesco)</option>
+                <option value="#FFD700">Dourado (Inter)</option>
+                <option value="#005CAA">Azul (Caixa)</option>
+                <option value="#000000">Preto (Black)</option>
+            </select>
+        </div>
+        <div class="text-end">
+            <button type="button" class="btn btn-secondary" onclick="fecharModal('modalNovoCartao')">Cancelar</button>
+            <button type="button" class="btn btn-warning" onclick="salvarCartao()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // 1. MÁSCARA DINHEIRO
+    const moneyInputs = document.querySelectorAll('.money-mask');
+    moneyInputs.forEach(input => {
+        if(input.value) formatCurrency(input);
+        input.addEventListener('input', (e) => formatCurrency(e.target));
+    });
+
+    function formatCurrency(input) {
+        let value = input.value.replace(/\D/g, "");
+        if (value === "") { input.value = ""; return; }
+        value = (parseInt(value) / 100).toFixed(2) + "";
+        value = value.replace(".", ",");
+        value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+        input.value = "R$ " + value;
+    }
+
+    // 2. TOGGLES
+  function setupToggle(radioName, divId, inputId) {
+        const radios = document.querySelectorAll(`input[name="${radioName}"]`);
+        const divContainer = document.getElementById(divId);
+        const inputField = document.getElementById(inputId);
+
+        // Se o container não existe na página, sai da função
+        if (!divContainer) return; 
+
+        function update() {
+            let isTrue = false;
+            radios.forEach(r => {
+                if (r.checked && (r.value === 'True' || r.value === 'true')) isTrue = true;
+            });
+
+            if (isTrue) {
+                // MOSTRAR: Aparece a div e torna o campo OBRIGATÓRIO
+                divContainer.style.display = 'block'; 
+                if(inputField) {
+                    inputField.required = true; // <--- A MÁGICA É AQUI
+                    setTimeout(() => inputField.focus(), 100);
+                }
+            } else {
+                // ESCONDER: Some a div e tira a obrigatoriedade
+                divContainer.style.display = 'none'; 
+                if(inputField) {
+                    inputField.value = ''; 
+                    inputField.required = false; // <--- ISSO RESOLVE O ERRO
+                }
+            }
+        }
+        
+        radios.forEach(r => r.addEventListener('change', update));
+        
+        // Roda uma vez ao carregar para definir estado inicial
+        update();
+    }
+    setupToggle('is_parcelado', 'div_qtd_parcelas', 'id_qtd_parcelas');
+    setupToggle('is_terceiro', 'div_terceiro', 'id_terceiro');
+});
+
+// --- 3. CONTROLE MANUAL (BLINDADO) ---
+// Usa display flex para centralizar, sem depender de classes do Bootstrap
+function abrirModal(modalId) {
+    console.log("Tentando abrir modal:", modalId);
+    const el = document.getElementById(modalId);
+    if(el) {
+        el.style.display = 'flex'; // Torna visível e flexível (para centralizar)
+    } else {
+        console.error("Modal não encontrado ID:", modalId);
+    }
+}
+
+function fecharModal(modalId) {
+    const el = document.getElementById(modalId);
+    if(el) {
+        el.style.display = 'none'; // Esconde
+    }
+}
+
+// --- 4. FUNÇÕES DE ENVIO (AJAX) ---
+function adicionarTerceiroJS() {
+    const nome = document.getElementById('novoNomeTerceiro').value.trim();
+    const relacionamento = document.getElementById('novoRelacaoTerceiro').value.trim();
+    
+    if(!nome) { alert("Nome é obrigatório!"); return; }
+    enviarDados("/api/criar-terceiro/", { nome, relacionamento }, 'terceiro');
+}
+
+function salvarCategoria() {
+    const nome = document.getElementById('catNome').value.trim();
+    const tipo = document.getElementById('catTipo').value;
+    if(!nome) { alert("Nome é obrigatório!"); return; }
+    enviarDados("/criar-categoria-rapida/", { nome, tipo }, 'categoria');
+}
+
+function salvarCartao() {
+    const nome = document.getElementById('cardNome').value.trim();
+    const digitos = document.getElementById('cardDigitos').value.trim();
+    const cor = document.getElementById('cardCor').value;
+    if(!nome || digitos.length !== 4) { alert("Preencha nome e 4 dígitos!"); return; }
+    enviarDados("/criar-cartao-rapido/", { nome, digitos, cor }, 'cartao');
+}
+
+function enviarDados(url, dados, campoNome) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify(dados)
+    })
+    .then(r => {
+        if (!r.ok) return r.json().then(errData => { throw new Error(errData.msg || 'Erro desconhecido'); });
+        return r.json();
+    })
+    .then(data => {
+        if(data.status === 'ok') {
+            const selectId = 'id_' + campoNome;
+            const select = document.getElementById(selectId);
+            if(select) {
+                const option = new Option(data.nome, data.id);
+                select.add(option, undefined);
+                select.value = data.id;
+            }
+            
+            // Fecha modal manualmente
+            let modalId = '';
+            if(campoNome === 'terceiro') modalId = 'modalNovoTerceiro';
+            if(campoNome === 'categoria') modalId = 'modalNovaCategoria';
+            if(campoNome === 'cartao') modalId = 'modalNovoCartao';
+            
+            fecharModal(modalId);
+            
+            // Limpa inputs
+            const modalEl = document.getElementById(modalId);
+            if(modalEl) {
+                modalEl.querySelectorAll('input').forEach(i => i.value = '');
+            }
+        } else {
+            alert('Erro: ' + data.msg);
+        }
+    })
+    .catch(e => { console.error(e); alert('Erro ao salvar: ' + e.message); });
+}
+</script>
+{% endblock %}

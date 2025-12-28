@@ -1,0 +1,177 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <a href="{% url 'home' %}?mes={{ mes }}&ano={{ ano }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+    
+    <div class="text-center">
+        <h4 class="mb-0">Fatura: {{ mes }}/{{ ano }}</h4>
+    </div>
+
+    <a href="{% url 'dash_terceiros' %}?mes={{ mes }}&ano={{ ano }}" class="btn btn-outline-primary btn-sm">
+        <i class="fas fa-users"></i> Gastos Terceiros
+    </a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12 mb-2 text-end">
+        <button class="btn btn-sm btn-outline-primary" onclick="filtrarTabela('todos')">Mostrar Todos</button>
+    </div>
+
+    {% for fatura in faturas %}
+    <div class="col-md-4 mb-3">
+        <div class="card bg-light card-filtro" 
+             style="cursor: pointer; transition: transform 0.2s; border: 2px solid {{ fatura.cartao__cor }};"
+             onclick="filtrarTabela('{{ fatura.cartao__id }}')"
+             id="card-{{ fatura.cartao__id }}"
+             data-cor-original="{{ fatura.cartao__cor }}">
+             
+          <div class="card-body text-center">
+            <h5 class="card-title text-dark">
+                {{ fatura.cartao__nome }} 
+                <small style="font-size: 0.7em; opacity: 0.6;">
+                    • {{ fatura.cartao__ultimos_digitos }}
+                </small>
+            </h5>
+            
+            <h3 style="color: {{ fatura.cartao__cor }}; font-weight: bold;">
+                R$ {{ fatura.total|floatformat:2 }}
+            </h3>
+            
+            <small class="text-muted">Toque para filtrar</small>
+        </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <strong>Itens da Fatura</strong>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Cartão</th>
+                    <th>Descrição</th>
+                    <th class="text-end">Valor</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-itens">
+                {% for item in itens %}
+                <tr class="linha-fatura {% if forloop.counter > 5 %}d-none extra-items{% endif %}" 
+                    data-cartao-id="{{ item.cartao.id }}">
+                    
+                    <td>{{ item.data_compra|date:"d/m" }}</td>
+                    <td>
+                       <span class="badge" style="background-color: {{ item.cartao.cor }}; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                            {{ item.cartao.nome }} 
+                            <small style="font-size: 0.75em; opacity: 0.9; margin-left: 3px;">
+                                • {{ item.cartao.ultimos_digitos }}
+                            </small>
+                        </span>
+                    </td>
+                    <td>{{ item.descricao }}</td>
+                    <td class="text-end fw-bold">R$ {{ item.valor|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center p-4">Nenhum gasto neste mês.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if itens|length > 5 %}
+    <div class="card-footer text-center bg-white" id="footer-ver-mais">
+        <button class="btn btn-sm btn-outline-secondary" onclick="toggleVerMais()" id="btn-ver-mais">
+            Exibir mais itens <i class="fas fa-chevron-down"></i>
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function filtrarTabela(idCartao) {
+        const linhas = document.querySelectorAll('.linha-fatura');
+        const cards = document.querySelectorAll('.card-filtro');
+        const btnVerMais = document.getElementById('footer-ver-mais');
+
+        // 1. Reseta todos os cards para o visual padrão (mas mantendo a cor da borda personalizada)
+        cards.forEach(card => {
+            const cor = card.getAttribute('data-cor-original');
+            
+            // Remove destaque de seleção
+            card.classList.remove('shadow');
+            card.style.backgroundColor = '#f8f9fa'; // bg-light
+            card.style.transform = 'scale(1)';
+        });
+
+        if (idCartao !== 'todos') {
+            const cardAtivo = document.getElementById(`card-${idCartao}`);
+            if(cardAtivo) {
+                // Aplica destaque no selecionado
+                cardAtivo.classList.add('shadow');
+                cardAtivo.style.backgroundColor = '#ffffff'; // Fica branco puro
+                cardAtivo.style.transform = 'scale(1.02)'; // Cresce um pouquinho
+            }
+        }
+
+        // 2. Filtragem das Linhas (Mantém a lógica anterior)
+        linhas.forEach(linha => {
+            const idLinha = linha.getAttribute('data-cartao-id');
+
+            if (idCartao === 'todos') {
+                const index = Array.from(linhas).indexOf(linha);
+                if (index < 5) {
+                    linha.classList.remove('d-none');
+                } else {
+                    linha.classList.add('d-none');
+                }
+                if(btnVerMais) btnVerMais.style.display = 'block';
+            } else {
+                if (idLinha === idCartao) {
+                    linha.classList.remove('d-none');
+                } else {
+                    linha.classList.add('d-none');
+                }
+                if(btnVerMais) btnVerMais.style.display = 'none';
+            }
+        });
+    }
+    
+    function toggleVerMais() {
+        const itensEscondidos = document.querySelectorAll('.extra-items');
+        const btn = document.getElementById('btn-ver-mais');
+        
+        // Verifica se estão visíveis ou não
+        const estaoEscondidos = itensEscondidos[0].classList.contains('d-none');
+
+        itensEscondidos.forEach(item => {
+            if (estaoEscondidos) {
+                item.classList.remove('d-none');
+            } else {
+                item.classList.add('d-none');
+            }
+        });
+
+        // Muda o texto do botão
+        if (estaoEscondidos) {
+            btn.innerHTML = 'Mostrar menos <i class="fas fa-chevron-up"></i>';
+        } else {
+            btn.innerHTML = 'Exibir mais itens <i class="fas fa-chevron-down"></i>';
+        }
+    }
+</script>
+
+<style>
+    /* Efeito simples de hover nos cards */
+    .card-filtro:hover {
+        transform: translateY(-3px);
+    }
+</style>
+
+{% endblock %}
