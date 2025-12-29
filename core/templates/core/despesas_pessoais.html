@@ -1,109 +1,139 @@
-{% extends 'core/base.html' %}
-
-{% block content %}
+{% extends 'core/base.html' %} {% block content %}
 <div class="container mt-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold"><i class="fas fa-user-check text-success"></i> Minhas Despesas Reais</h4>
-            <p class="text-muted mb-0">Referência: {{ mes }}/{{ ano }}</p>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold">
+        <i class="fas fa-user-check text-success"></i> Minhas Despesas Reais
+      </h4>
+      <p class="text-muted mb-0">Referência: {{ mes }}/{{ ano }}</p>
+    </div>
+    <a
+      href="{% url 'home' %}?mes={{ mes }}&ano={{ ano }}"
+      class="btn btn-outline-secondary"
+    >
+      <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4 bg-light">
+    <div class="card-body text-center">
+      <small class="text-uppercase text-muted">Total Gasto (Pessoal)</small>
+      <h2 class="text-dark fw-bold mb-0">R$ {{ total_geral|floatformat:2 }}</h2>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12 mb-4">
+      <div class="card shadow border-0">
+        <div class="card-header bg-white border-bottom">
+          <h6 class="mb-0 fw-bold text-secondary">
+            <i class="fas fa-money-bill-wave me-2"></i> Despesas em Dinheiro /
+            Conta
+          </h6>
         </div>
-        <a href="{% url 'home' %}?mes={{ mes }}&ano={{ ano }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Voltar
-        </a>
+        <div class="card-body p-0">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Dia</th>
+                <th>Categoria</th>
+                <th>Descrição</th>
+                <th class="text-end">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in despesas_conta %}
+              <tr>
+                <td>{{ item.data|date:"d" }}</td>
+                <td>
+                  <span class="badge bg-secondary"
+                    >{{ item.categoria.nome }}</span
+                  >
+                </td>
+                <td>{{ item.descricao|default:"-" }}</td>
+                <td class="text-end fw-bold">
+                  R$ {{ item.valor|floatformat:2 }}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center py-3 text-muted">
+                  Nenhuma conta paga este mês.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td colspan="3" class="text-end fw-bold">Subtotal</td>
+                <td class="text-end fw-bold">
+                  R$ {{ total_conta|floatformat:2 }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
     </div>
 
-    <div class="card border-0 shadow-sm mb-4 bg-light">
-        <div class="card-body text-center">
-            <small class="text-uppercase text-muted">Total Gasto (Pessoal)</small>
-            <h2 class="text-dark fw-bold mb-0">R$ {{ total_geral|floatformat:2 }}</h2>
+    <div class="col-md-12">
+      <div class="card shadow border-0">
+        <div class="card-header bg-white border-bottom">
+          <h6 class="mb-0 fw-bold text-warning">
+            <i class="fas fa-credit-card me-2"></i> Despesas Cartão de Crédito
+            (Pessoais)
+          </h6>
         </div>
-    </div>
+        <div class="card-body p-0">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Data</th>
+                <th>Cartão</th>
+                <th>Descrição</th>
+                <th class="text-end">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in despesas_cartao %}
+              <tr>
+                <td>{{ item.data_compra|date:"d/m" }}</td>
 
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="card shadow border-0">
-                <div class="card-header bg-white border-bottom">
-                    <h6 class="mb-0 fw-bold text-secondary">
-                        <i class="fas fa-money-bill-wave me-2"></i> Despesas em Dinheiro / Conta
-                    </h6>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Dia</th>
-                                <th>Categoria</th>
-                                <th>Descrição</th>
-                                <th class="text-end">Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in despesas_conta %}
-                            <tr>
-                                <td>{{ item.data|date:"d" }}</td>
-                                <td><span class="badge bg-secondary">{{ item.categoria.nome }}</span></td>
-                                <td>{{ item.descricao|default:"-" }}</td>
-                                <td class="text-end fw-bold">R$ {{ item.valor|floatformat:2 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="4" class="text-center py-3 text-muted">Nenhuma conta paga este mês.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="3" class="text-end fw-bold">Subtotal</td>
-                                <td class="text-end fw-bold">R$ {{ total_conta|floatformat:2 }}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-        </div>
+                <td>
+                  <span
+                    class="badge rounded-pill"
+                    style="background-color: {{ item.cartao.cor }}; font-weight: normal; font-size: 0.85rem;"
+                  >
+                    {{ item.cartao.nome }} - {{ item.cartao.ultimos_digitos }}
+                  </span>
+                </td>
 
-        <div class="col-md-12">
-            <div class="card shadow border-0">
-                <div class="card-header bg-white border-bottom">
-                    <h6 class="mb-0 fw-bold text-warning">
-                        <i class="fas fa-credit-card me-2"></i> Despesas Cartão de Crédito (Pessoais)
-                    </h6>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Data</th>
-                                <th>Cartão</th>
-                                <th>Descrição</th>
-                                <th class="text-end">Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in despesas_cartao %}
-                            <tr>
-                                <td>{{ item.data_compra|date:"d/m" }}</td>
-                                <td><small class="text-muted">{{ item.cartao.apelido }}</small></td>
-                                <td>
-                                    {{ item.descricao }}
-                                    {% if item.is_parcelado %}
-                                        <span class="badge bg-light text-dark border ms-1">{{ item.parcela_atual }}/{{ item.qtd_parcelas }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end fw-bold">R$ {{ item.valor|floatformat:2 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="4" class="text-center py-3 text-muted">Nenhuma compra pessoal no cartão.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="3" class="text-end fw-bold">Subtotal</td>
-                                <td class="text-end fw-bold">R$ {{ total_cartao|floatformat:2 }}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
+                <td>{{ item.descricao }}</td>
+
+                <td class="text-end fw-bold">
+                  R$ {{ item.valor|floatformat:2 }}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center py-3 text-muted">
+                  Nenhuma compra pessoal no cartão.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td colspan="3" class="text-end fw-bold">Subtotal</td>
+                <td class="text-end fw-bold">
+                  R$ {{ total_cartao|floatformat:2 }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
