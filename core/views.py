@@ -13,6 +13,8 @@ from django.contrib.auth import login
 from django.db.models import ProtectedError
 from django.contrib import messages
 
+from django.shortcuts import get_object_or_404
+
 @login_required
 def home(request):
     # --- 1. Filtros de Data (Blindado) ---
@@ -695,3 +697,41 @@ def excluir_item(request, tipo, id_item):
         messages.error(request, "Erro ao excluir o item.")
 
     return redirect('gerenciar_cadastros')
+
+
+@login_required
+def editar_compra(request, compra_id):
+    # Busca a compra garantindo que pertence a um cartão do usuário logado (Segurança)
+    compra = get_object_or_404(CompraCartao, id=compra_id, cartao__usuario=request.user)
+    
+    if request.method == 'POST':
+        form = CompraCartaoForm(request.POST, instance=compra, user=request.user)
+        if form.is_valid():
+            compra_editada = form.save()
+            # Redireciona para o mês da compra editada
+            return redirect(f"/?mes={compra_editada.data_compra.month}&ano={compra_editada.data_compra.year}")
+    else:
+        # Preenche o formulário com os dados atuais
+        form = CompraCartaoForm(instance=compra, user=request.user)
+    
+    return render(request, 'core/form_generico.html', {
+        'form': form, 
+        'titulo': f'Editar: {compra.descricao}'
+    })
+
+@login_required
+def excluir_compra(request, compra_id):
+    compra = get_object_or_404(CompraCartao, id=compra_id, cartao__usuario=request.user)
+    
+    # Guarda o mês/ano para redirecionar o usuário de volta para o lugar certo
+    mes = compra.data_compra.month
+    ano = compra.data_compra.year
+    
+    compra.delete()
+    
+    # Opcional: Adicionar mensagem de sucesso
+    # messages.success(request, 'Compra removida com sucesso.')
+    
+    # Se você estava na tela de detalhes da fatura, o ideal seria voltar pra lá.
+    # Mas como simplificação, voltamos para a Home filtrada no mês.
+    return redirect(f"/?mes={mes}&ano={ano}")

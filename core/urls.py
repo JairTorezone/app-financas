@@ -24,4 +24,6 @@ urlpatterns = [
     
     # Rota para Excluir itens
     path('excluir/<str:tipo>/<int:id_item>/', views.excluir_item, name='excluir_item'),
+    path('compra/editar/<int:compra_id>/', views.editar_compra, name='editar_compra'),
+    path('compra/excluir/<int:compra_id>/', views.excluir_compra, name='excluir_compra'),
 ]
