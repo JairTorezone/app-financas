@@ -202,41 +202,45 @@ def adicionar_transacao(request, tipo):
 
     return render(request, 'core/form_generico.html', {'form': form, 'titulo': titulo})
 
+
 @login_required
 def adicionar_compra(request):
-    if not CartaoCredito.objects.filter(usuario=request.user).exists():
-        return redirect('cadastrar_cartao')
-
-    # Lógica de Data Inicial (Mantida igual)
-    try:
-        mes = int(request.GET.get('mes', date.today().month))
-        ano = int(request.GET.get('ano', date.today().year))
-        if mes == date.today().month and ano == date.today().year:
-            data_obj = date.today()
-        else:
-            data_obj = date(ano, mes, 1)
-    except:
-        data_obj = date.today()
+    from datetime import date # Garante import
     
-    data_formatada = data_obj.strftime('%Y-%m-%d')
+    # 1. Pega mês/ano da URL ou usa Hoje
+    try:
+        mes_url = request.GET.get('mes')
+        ano_url = request.GET.get('ano')
+        
+        if mes_url and ano_url:
+            # Cria data: Dia 01 do mês selecionado
+            # Ex: Se URL é mes=6, cria 2025-06-01
+            data_inicial = date(int(ano_url), int(mes_url), 1)
+        else:
+            data_inicial = date.today()
+    except:
+        data_inicial = date.today()
 
-    # --- REMOVIDO: A lógica antiga de buscar 'nomes_terceiros' foi apagada ---
-    # O form.terceiro (Select) já faz isso sozinho agora.
+    # Formata YYYY-MM-DD para o input HTML
+    data_formatada = data_inicial.strftime('%Y-%m-%d')
 
     if request.method == 'POST':
+        # Passa o usuário para filtrar cartões
         form = CompraCartaoForm(request.POST, user=request.user)
         if form.is_valid():
             compra = form.save()
+            # Redireciona para o mês onde a compra caiu
             return redirect(f"/?mes={compra.data_compra.month}&ano={compra.data_compra.year}")
     else:
+        # INICIALIZA O FORMULÁRIO COM A DATA CERTA
         form = CompraCartaoForm(
-            initial={'data_compra': data_formatada}, 
-            user=request.user
+            user=request.user, 
+            initial={'data_compra': data_formatada}
         )
-    
+
     return render(request, 'core/form_generico.html', {
         'form': form, 
-        'titulo': 'Nova Compra no Cartão'
+        'titulo': 'Nova Compra Cartão'
     })
 
 @login_required
