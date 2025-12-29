@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-white rounded shadow-sm">
-   <form method="GET" class="d-flex align-items-center gap-2">
+    <form method="GET" class="d-flex align-items-center gap-2">
         <select name="mes" class="form-select border-0 bg-light" onchange="this.form.submit()" style="font-weight: 500;">
             <option value="1" {% if mes_atual|add:"0" == 1 %}selected{% endif %}>Janeiro</option>
             <option value="2" {% if mes_atual|add:"0" == 2 %}selected{% endif %}>Fevereiro</option>
@@ -55,7 +55,7 @@
     </div>
 </div>
 
-<div class="row mb-4">
+<div class="row mb-3">
     <div class="col-md-4 mb-2">
         <div class="card border-success border-2 h-100">
             <div class="card-body">
@@ -77,12 +77,44 @@
     <div class="col-md-4 mb-2">
         <div class="card {% if saldo >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white h-100">
             <div class="card-body">
-                <h6>Saldo em Conta</h6>
+                <h6>Saldo em Conta (Real)</h6>
                 <h3>R$ {{ saldo|floatformat:2 }}</h3>
             </div>
         </div>
     </div>
 </div>
+
+{% if gastos_terceiros > 0 %}
+<div class="card border-0 shadow-sm mb-4" style="background-color: #f8f9fa;">
+    <div class="card-body py-2">
+        <div class="row align-items-center text-center text-md-start">
+            
+            <div class="col-md-4 border-end-md mb-2 mb-md-0">
+                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">A Receber (Terceiros)</small>
+                <div class="d-flex align-items-center justify-content-center justify-content-md-start mt-1">
+                    <i class="fas fa-hand-holding-usd text-warning me-2 fa-lg"></i>
+                    <h5 class="mb-0 text-dark">R$ {{ gastos_terceiros|floatformat:2 }}</h5>
+                </div>
+            </div>
+
+            <div class="col-md-4 border-end-md mb-2 mb-md-0">
+                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Minha Despesa Real</small>
+                <h5 class="mt-1 mb-0 text-secondary">R$ {{ despesas_pessoais|floatformat:2 }}</h5>
+            </div>
+
+            <div class="col-md-4">
+                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Saldo Pessoal Estimado</small>
+                {% if saldo_pessoal < 0 %}
+                    <h5 class="mt-1 mb-0 text-danger">R$ {{ saldo_pessoal|floatformat:2 }}</h5>
+                {% else %}
+                    <h5 class="mt-1 mb-0 text-primary">R$ {{ saldo_pessoal|floatformat:2 }}</h5>
+                {% endif %}
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% if tem_cartoes and gastos_cartao > 0 %}
 <div class="card mb-4 border-warning">

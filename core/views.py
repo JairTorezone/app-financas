@@ -11,8 +11,6 @@ from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
 from .forms import CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm, RelatorioFiltroForm
 from django.contrib.auth import login
 
-
-
 @login_required
 def home(request):
     # --- 1. Filtros de Data (Blindado) ---
@@ -32,33 +30,51 @@ def home(request):
 
     # --- 2. Cálculos de Totais (COM FILTRO DE USUÁRIO) ---
     
-    # Receitas: Adicionado usuario=request.user
+    # Receitas
     total_receitas = Transacao.objects.filter(
-        usuario=request.user,  # <--- CORREÇÃO AQUI
+        usuario=request.user, 
         categoria__tipo='R', 
         **filtro_data
     ).aggregate(Sum('valor'))['valor__sum'] or 0
 
-    # Despesas Fixas: Adicionado usuario=request.user
+    # Despesas Fixas (Conta/Dinheiro)
     total_despesas_fixas = Transacao.objects.filter(
-        usuario=request.user,  # <--- CORREÇÃO AQUI
+        usuario=request.user, 
         categoria__tipo='D', 
         **filtro_data
     ).aggregate(Sum('valor'))['valor__sum'] or 0
 
-    # Cartão: Atenção aqui! Como CompraCartao não tem 'usuario', usamos 'cartao__usuario'
+    # Cartão Total (Fatura Cheia)
     total_cartao = CompraCartao.objects.filter(
-        cartao__usuario=request.user,  # <--- CORREÇÃO AQUI (Relacionamento Reverso)
+        cartao__usuario=request.user, 
         **filtro_cartao
     ).aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # --- NOVO: CÁLCULO DE TERCEIROS E PESSOAL ---
     
-    saldo = total_receitas - total_despesas_fixas - total_cartao
+    # Soma apenas compras marcadas como "Terceiro"
+    gastos_terceiros = CompraCartao.objects.filter(
+        cartao__usuario=request.user,
+        is_terceiro=True,
+        **filtro_cartao
+    ).aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # Totais Gerais
+    total_despesas_geral = total_despesas_fixas + total_cartao
+    saldo_bancario = total_receitas - total_despesas_geral
+
+    # Totais Pessoais (Realidade do Usuário)
+    # Despesa Pessoal = Tudo que gastou MENOS o que é de terceiros
+    despesas_pessoais = total_despesas_geral - gastos_terceiros
+    
+    # Saldo Pessoal = Receita MENOS despesas pessoais (considerando que terceiros vão pagar)
+    saldo_pessoal = total_receitas - despesas_pessoais
 
     # --- 3. Listas Detalhadas ---
     
     # Lista de Receitas
     receitas_detalhadas = Transacao.objects.filter(
-        usuario=request.user,  # <--- CORREÇÃO AQUI
+        usuario=request.user, 
         categoria__tipo='R', 
         **filtro_data
     ).values('categoria__nome')\
@@ -67,7 +83,7 @@ def home(request):
 
     # Lista de Despesas (Banco)
     despesas_query = Transacao.objects.filter(
-        usuario=request.user,  # <--- CORREÇÃO AQUI
+        usuario=request.user, 
         categoria__tipo='D', 
         **filtro_data
     ).values('categoria__nome')\
@@ -86,23 +102,32 @@ def home(request):
     # Ordena despesas (maior para menor)
     lista_despesas.sort(key=lambda x: x['total'], reverse=True)
 
-    # Verifica se usuário tem cartões (Este já estava correto, mas mantive por segurança)
     tem_cartoes = CartaoCredito.objects.filter(usuario=request.user).exists()
 
     # --- 4. Contexto Final ---
     contexto = {
         'mes_atual': mes_atual,
         'ano_atual': ano_atual,
+        
+        # Dados Bancários (Reais)
         'receitas': total_receitas,
-        'despesas': total_despesas_fixas + total_cartao,
+        'despesas': total_despesas_geral,
+        'saldo': saldo_bancario,
+        
+        # Dados de Terceiros / Pessoal
         'gastos_cartao': total_cartao,
-        'saldo': saldo,
+        'gastos_terceiros': gastos_terceiros,
+        'despesas_pessoais': despesas_pessoais,
+        'saldo_pessoal': saldo_pessoal,
+
+        # Listas
         'lista_receitas': receitas_detalhadas,
         'lista_despesas': lista_despesas,
         'tem_cartoes': tem_cartoes
     }
 
     return render(request, 'core/home.html', contexto)
+
 
 @login_required
 def detalhe_cartao(request):
@@ -402,7 +427,6 @@ def detalhe_terceiro(request, terceiro_id):
         'ano': ano
     })
 
-# core/views.py
 
 @login_required
 def relatorio_financeiro(request):
