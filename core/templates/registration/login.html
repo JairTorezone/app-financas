@@ -2,33 +2,68 @@
 
 {% block content %}
 <div class="row justify-content-center mt-5">
-    <div class="col-md-4">
-        <div class="card shadow">
-            <div class="card-body">
-                <h3 class="text-center">Login</h3>
+    <div class="col-md-5"> <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4">Login</h3>
+
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i> Usuário ou senha incorretos.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endif %}
+
                 <form method="post">
                     {% csrf_token %}
+                    
                     <div class="mb-3">
-                        <label>Usuário</label>
-                        <input type="text" name="username" class="form-control" required>
+                        <label class="fw-bold">Usuário</label>
+                        <input type="text" name="username" class="form-control form-control-lg" placeholder="Seu usuário" required autofocus>
                     </div>
+
                     <div class="mb-3">
-                        <label>Senha</label>
-                        <input type="password" name="password" class="form-control" required>
+                        <label class="fw-bold">Senha</label>
+                        <div class="input-group">
+                            <input type="password" name="password" class="form-control form-control-lg" placeholder="Sua senha" required id="id_password_login">
+                            
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('id_password_login')">
+                                <i class="fas fa-eye" id="icon-id_password_login"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Entrar</button>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">Entrar</button>
                     </div>
-                    <div class="text-center d-flex justify-content-between">
-                        
-                        <a href="{% url 'password_reset' %}" class="small text-danger">Esqueci minha senha</a>
+
+                    <div class="text-center d-flex justify-content-between mt-3">
+                        <a href="{% url 'password_reset' %}" class="small text-danger text-decoration-none">Esqueci minha senha</a>
                     </div>
                 </form>
+                
+                <hr>
                 <p class="mt-3 text-center">
-                    Não tem conta? <a href="{% url 'registro' %}">Cadastre-se</a>
+                    Não tem conta? <a href="{% url 'registro' %}" class="fw-bold text-decoration-none">Cadastre-se</a>
                 </p>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    function togglePassword(fieldId) {
+        const input = document.getElementById(fieldId);
+        const icon = document.getElementById('icon-' + fieldId);
+        
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = "password";
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+</script>
 {% endblock %}

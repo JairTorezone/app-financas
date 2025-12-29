@@ -3,36 +3,77 @@
 {% block content %}
 <div class="row justify-content-center mt-5">
     <div class="col-md-5">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white text-center">
+        <div class="card shadow border-0">
+            <div class="card-header bg-primary text-white text-center py-3">
                 <h4 class="mb-0">Criar Nova Conta</h4>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <form method="post">
                     {% csrf_token %}
                     
                     {% for field in form %}
                         <div class="mb-3">
                             <label class="form-label fw-bold">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.help_text %}
-                                <div class="form-text small">{{ field.help_text }}</div>
+                            
+                            {% if 'password' in field.name %}
+                                <div class="input-group">
+                                    {{ field }} 
+                                    
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('{{ field.auto_id }}')">
+                                        <i class="fas fa-eye" id="icon-{{ field.auto_id }}"></i>
+                                    </button>
+                                </div>
+                            {% else %}
+                                {{ field }}
                             {% endif %}
+
+                            {% if field.help_text %}
+                                <div class="form-text small text-muted">{{ field.help_text }}</div>
+                            {% endif %}
+                            
                             {% for error in field.errors %}
-                                <div class="text-danger small">{{ error }}</div>
+                                <div class="text-danger small mt-1">{{ error }}</div>
                             {% endfor %}
                         </div>
                     {% endfor %}
 
-                    <div class="d-grid gap-2">
+                    <div class="d-grid gap-2 mt-4">
                         <button type="submit" class="btn btn-success btn-lg">Cadastrar</button>
                     </div>
                 </form>
             </div>
-            <div class="card-footer text-center">
-                <small>Já tem uma conta? <a href="{% url 'login' %}">Entrar</a></small>
+            <div class="card-footer text-center bg-white py-3">
+                <small>Já tem uma conta? <a href="{% url 'login' %}" class="fw-bold text-decoration-none">Entrar</a></small>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // 1. Script para forçar a classe form-control nos inputs do Django (Visual bonito)
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputs = document.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            if (!input.classList.contains('form-check-input')) {
+                input.classList.add('form-control');
+            }
+        });
+    });
+
+    // 2. Script do Olhinho
+    function togglePassword(fieldId) {
+        const input = document.getElementById(fieldId);
+        const icon = document.getElementById('icon-' + fieldId);
+        
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = "password";
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+</script>
 {% endblock %}
