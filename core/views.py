@@ -2,14 +2,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-from django.db.models import Sum, Q
-from datetime import date, datetime, timedelta
-import calendar
+from django.db.models import Sum
+from datetime import date
 import json
 
 from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
 from .forms import CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm, RelatorioFiltroForm
 from django.contrib.auth import login
+
+from django.db.models import ProtectedError
+from django.contrib import messages
 
 @login_required
 def home(request):
@@ -553,9 +555,6 @@ def relatorio_detalhe_cartao(request):
     }
     return render(request, 'core/relatorio_detalhe.html', context)
 
-
-# core/views.py
-
 @login_required
 def lista_gastos_terceiros(request):
     import calendar
@@ -636,3 +635,59 @@ def detalhe_despesas_pessoais(request):
         'total_geral': total_geral,
         'mes': mes, 'ano': ano
     })
+
+@login_required
+def gerenciar_cadastros(request):
+    # Busca tudo que pertence ao usuário
+    categorias = Categoria.objects.filter(usuario=request.user).order_by('tipo', 'nome')
+    cartoes = CartaoCredito.objects.filter(usuario=request.user)
+    terceiros = Terceiro.objects.filter(usuario=request.user)
+    
+    return render(request, 'core/gerenciar_cadastros.html', {
+        'categorias': categorias,
+        'cartoes': cartoes,
+        'terceiros': terceiros
+    })
+
+@login_required
+def excluir_item(request, tipo, id_item):
+    # Dicionário para mapear a string da URL para o Modelo real
+    mapa_modelos = {
+        'categoria': Categoria,
+        'cartao': CartaoCredito,
+        'terceiro': Terceiro
+    }
+    
+    Modelo = mapa_modelos.get(tipo)
+    
+    if not Modelo:
+        messages.error(request, "Item inválido.")
+        return redirect('gerenciar_cadastros')
+    
+    # Tenta pegar o item (Garante que pertence ao usuário logado)
+    try:
+        obj = Modelo.objects.get(id=id_item, usuario=request.user)
+    except Modelo.DoesNotExist:
+        messages.error(request, "Item não encontrado.")
+        return redirect('gerenciar_cadastros')
+
+    # Tenta Excluir
+    try:
+        # Verifica dependências manualmente antes de deletar para dar msg amigável
+        if tipo == 'cartao' and CompraCartao.objects.filter(cartao=obj).exists():
+            messages.warning(request, f"Não é possível excluir o cartão '{obj.nome}' pois ele tem compras registradas.")
+            
+        elif tipo == 'categoria' and Transacao.objects.filter(categoria=obj).exists():
+            messages.warning(request, f"A categoria '{obj.nome}' está em uso em lançamentos e não pode ser excluída.")
+            
+        elif tipo == 'terceiro' and CompraCartao.objects.filter(terceiro=obj).exists():
+            messages.warning(request, f"O terceiro '{obj.nome}' possui dívidas registradas e não pode ser excluído.")
+            
+        else:
+            obj.delete()
+            messages.success(request, f"{tipo.capitalize()} excluído com sucesso!")
+            
+    except Exception as e:
+        messages.error(request, "Erro ao excluir o item.")
+
+    return redirect('gerenciar_cadastros')

@@ -20,4 +20,8 @@ urlpatterns = [
     
     # Rota para a lista completa pessoal
     path('relatorios/pessoal/', views.detalhe_despesas_pessoais, name='detalhe_despesas_pessoais'),
+    path('configuracoes/', views.gerenciar_cadastros, name='gerenciar_cadastros'),
+    
+    # Rota para Excluir itens
+    path('excluir/<str:tipo>/<int:id_item>/', views.excluir_item, name='excluir_item'),
 ]
