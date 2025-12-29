@@ -552,3 +552,87 @@ def relatorio_detalhe_cartao(request):
         'is_cartao': True # Flag para mudar as colunas no HTML
     }
     return render(request, 'core/relatorio_detalhe.html', context)
+
+
+# core/views.py
+
+@login_required
+def lista_gastos_terceiros(request):
+    import calendar
+    
+    # 1. Recupera Data da URL ou Hoje
+    try:
+        mes = int(request.GET.get('mes', date.today().month))
+        ano = int(request.GET.get('ano', date.today().year))
+    except:
+        mes = date.today().month
+        ano = date.today().year
+
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    data_inicio = date(ano, mes, 1)
+    data_fim = date(ano, mes, ultimo_dia)
+    
+    # 2. Agrupa gastos por Terceiro
+    # Isso cria aquela lista: Jaime: R$ 350, Paulo: R$ 75...
+    # Ajuste 'terceiro__nome' se o seu campo for diferente
+    terceiros_agrupados = CompraCartao.objects.filter(
+        cartao__usuario=request.user,
+        is_terceiro=True,
+        data_compra__range=[data_inicio, data_fim]
+    ).values('terceiro__nome', 'terceiro__parentesco', 'terceiro__id').annotate(total=Sum('valor')).order_by('-total')
+
+    total_geral = CompraCartao.objects.filter(
+        cartao__usuario=request.user,
+        is_terceiro=True,
+        data_compra__range=[data_inicio, data_fim]
+    ).aggregate(Sum('valor'))['valor__sum'] or 0
+
+    return render(request, 'core/lista_terceiros.html', {
+        'terceiros': terceiros_agrupados,
+        'total_geral': total_geral,
+        'mes': mes, 'ano': ano,
+        'data_inicio': data_inicio, 'data_fim': data_fim
+    })
+
+@login_required
+def detalhe_despesas_pessoais(request):
+    import calendar
+    
+    try:
+        mes = int(request.GET.get('mes', date.today().month))
+        ano = int(request.GET.get('ano', date.today().year))
+    except:
+        mes = date.today().month
+        ano = date.today().year
+
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    data_inicio = date(ano, mes, 1)
+    data_fim = date(ano, mes, ultimo_dia)
+
+    # 1. Despesas em Dinheiro (Contas, Pix, etc)
+    despesas_conta = Transacao.objects.filter(
+        usuario=request.user,
+        categoria__tipo='D', # Somente Despesas
+        data__range=[data_inicio, data_fim]
+    ).order_by('data')
+
+    # 2. Despesas Cartão (Somente as suas, is_terceiro=False)
+    despesas_cartao = CompraCartao.objects.filter(
+        cartao__usuario=request.user,
+        is_terceiro=False, # <--- O segredo está aqui
+        data_compra__range=[data_inicio, data_fim]
+    ).order_by('data_compra')
+
+    # Totais
+    total_conta = despesas_conta.aggregate(Sum('valor'))['valor__sum'] or 0
+    total_cartao = despesas_cartao.aggregate(Sum('valor'))['valor__sum'] or 0
+    total_geral = total_conta + total_cartao
+
+    return render(request, 'core/despesas_pessoais.html', {
+        'despesas_conta': despesas_conta,
+        'despesas_cartao': despesas_cartao,
+        'total_conta': total_conta,
+        'total_cartao': total_cartao,
+        'total_geral': total_geral,
+        'mes': mes, 'ano': ano
+    })

@@ -16,4 +16,8 @@ urlpatterns = [
     path('relatorio/', views.relatorio_financeiro, name='relatorio'),
     path('relatorio/detalhes/<int:categoria_id>/', views.relatorio_detalhe_categoria, name='relatorio_detalhe'),
     path('relatorio/detalhes-cartao/', views.relatorio_detalhe_cartao, name='relatorio_detalhe_cartao'),
+    path('terceiros/resumo/', views.lista_gastos_terceiros, name='lista_gastos_terceiros'),
+    
+    # Rota para a lista completa pessoal
+    path('relatorios/pessoal/', views.detalhe_despesas_pessoais, name='detalhe_despesas_pessoais'),
 ]

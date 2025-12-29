@@ -90,16 +90,28 @@
         <div class="row align-items-center text-center text-md-start">
             
             <div class="col-md-4 border-end-md mb-2 mb-md-0">
-                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">A Receber (Terceiros)</small>
-                <div class="d-flex align-items-center justify-content-center justify-content-md-start mt-1">
-                    <i class="fas fa-hand-holding-usd text-warning me-2 fa-lg"></i>
-                    <h5 class="mb-0 text-dark">R$ {{ gastos_terceiros|floatformat:2 }}</h5>
-                </div>
+    
+                <a href="{% url 'dash_terceiros' %}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="text-decoration-none d-block">
+                    
+                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">
+                        A Receber (Terceiros) <i class="fas fa-external-link-alt ms-1"></i>
+                    </small>
+                    
+                    <div class="d-flex align-items-center justify-content-center justify-content-md-start mt-1">
+                        <div class="bg-warning bg-opacity-10 rounded p-2 me-2">
+                            <i class="fas fa-hand-holding-usd text-warning fa-lg"></i>
+                        </div>
+                        <h5 class="mb-0 text-dark">R$ {{ gastos_terceiros|floatformat:2 }}</h5>
+                    </div>
+                </a>
+
             </div>
 
             <div class="col-md-4 border-end-md mb-2 mb-md-0">
-                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Minha Despesa Real</small>
-                <h5 class="mt-1 mb-0 text-secondary">R$ {{ despesas_pessoais|floatformat:2 }}</h5>
+                <a href="{% url 'detalhe_despesas_pessoais' %}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="text-decoration-none d-block">
+                    <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Minha Despesa Real <i class="fas fa-list-alt ms-1"></i></small>
+                    <h5 class="mt-1 mb-0 text-secondary">R$ {{ despesas_pessoais|floatformat:2 }}</h5>
+                </a>
             </div>
 
             <div class="col-md-4">

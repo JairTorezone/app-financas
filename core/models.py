@@ -53,7 +53,6 @@ class CartaoCredito(models.Model):
     def __str__(self):
         return f"{self.nome} final {self.ultimos_digitos}"
 
-
 class Terceiro(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     nome = models.CharField(max_length=100)
