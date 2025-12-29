@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -145,13 +146,18 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 # ... no final do arquivo ...
 
 # Em vez de enviar e-mail real, mostra no Terminal do VS Code
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# --- CONFIGURAÇÃO PARA PRODUÇÃO (FUTURO - Gmail) ---
-# Quando for para o ar, trocaremos para estas configurações:
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'seu-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'senha-de-app-do-google' # Não é sua senha normal
+if os.environ.get('RENDER'):
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    # Aqui o Django vai buscar os valores nas "Environment Variables" do servidor
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+    # Email padrão de envio
+    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
+else:
+    # Desenvolvimento (Seu PC)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
