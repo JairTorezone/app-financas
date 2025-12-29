@@ -154,9 +154,14 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 if os.environ.get('RENDER'):
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.gmail.com'
-    EMAIL_PORT = 587
-    EMAIL_USE_TLS = True
+    
+    # MUDANÇA AQUI: Usar SSL na porta 465
+    EMAIL_PORT = 465
+    EMAIL_USE_SSL = True  # <--- SSL ligado
+    EMAIL_USE_TLS = False # <--- TLS desligado
+    
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
