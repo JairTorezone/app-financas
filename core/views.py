@@ -7,7 +7,8 @@ from datetime import date
 import json
 
 from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
-from .forms import CompraCartaoForm, TransacaoForm, CartaoCreditoForm
+from .forms import CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm
+from django.contrib.auth import login
 
 @login_required
 def home(request):
@@ -310,14 +311,16 @@ def criar_cartao_rapido(request):
 
 def registro(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CadastroForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user) # Já loga o usuário direto após criar
+            # Faz o login automático após o cadastro e redireciona para a Home
+            login(request, user)
             return redirect('home')
     else:
-        form = UserCreationForm()
-    return render(request, 'registration/registro.html', {'form': form})
+        form = CadastroForm()
+    
+    return render(request, 'registration/register.html', {'form': form})
 
 @login_required
 def dash_terceiros(request):

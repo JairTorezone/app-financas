@@ -12,6 +12,9 @@ from dateutil.relativedelta import relativedelta
 from decimal import Decimal
 import copy
 
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+
 # --- MIXIN PARA REUTILIZAR A LIMPEZA DE VALOR ---
 class MoneyCleanMixin:
     def clean_valor(self):
@@ -183,3 +186,24 @@ class CartaoCreditoForm(forms.ModelForm):
             'cor': forms.Select(attrs={'class': 'form-select'}), 
         }
 
+# --- ADICIONE ESTE FORMULÁRIO NOVO ---
+class CadastroForm(UserCreationForm):
+    # Sobrescrevemos o campo de email para torná-lo obrigatório (required=True)
+    email = forms.EmailField(
+        required=True, 
+        label="E-mail", 
+        help_text="Necessário para recuperar a senha caso você esqueça."
+    )
+
+    class Meta:
+        model = User
+        # Define a ordem dos campos: Usuário primeiro, depois E-mail
+        # As senhas (1 e 2) o Django adiciona automaticamente no final
+        fields = ("username", "email")
+
+    # Opcional: Validação extra para garantir que o email não seja usado por outro usuário
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Este e-mail já está cadastrado. Tente recuperar sua senha.")
+        return email
