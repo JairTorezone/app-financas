@@ -207,3 +207,16 @@ class CadastroForm(UserCreationForm):
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError("Este e-mail já está cadastrado. Tente recuperar sua senha.")
         return email
+
+
+class RelatorioFiltroForm(forms.Form):
+    data_inicio = forms.DateField(
+        required=False, 
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label="Data Início"
+    )
+    data_fim = forms.DateField(
+        required=False, 
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label="Data Fim"
+    )

@@ -13,5 +13,6 @@ urlpatterns = [
     path('terceiros/', views.dash_terceiros, name='dash_terceiros'),
     path('terceiros/<int:terceiro_id>/', views.detalhe_terceiro, name='detalhe_terceiro'),
     path('api/criar-terceiro/', views.criar_terceiro_rapido, name='criar_terceiro_rapido'),
+    path('relatorio/', views.relatorio_financeiro, name='relatorio'),
     
 ]

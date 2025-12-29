@@ -2,13 +2,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-from django.db.models import Sum
-from datetime import date
+from django.db.models import Sum, Q
+from datetime import date, datetime, timedelta
+import calendar
 import json
 
 from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
-from .forms import CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm
+from .forms import CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm, RelatorioFiltroForm
 from django.contrib.auth import login
+
+
 
 @login_required
 def home(request):
@@ -398,3 +401,69 @@ def detalhe_terceiro(request, terceiro_id):
         'mes': mes,
         'ano': ano
     })
+
+@login_required
+def relatorio_financeiro(request):
+    import calendar
+    
+    hoje = date.today()
+    ultimo_dia_mes = calendar.monthrange(hoje.year, hoje.month)[1]
+    
+    data_inicio = hoje.replace(day=1)
+    data_fim = hoje.replace(day=ultimo_dia_mes)
+
+    form = RelatorioFiltroForm(request.GET or None)
+    
+    if form.is_valid():
+        if form.cleaned_data['data_inicio']:
+            data_inicio = form.cleaned_data['data_inicio']
+        if form.cleaned_data['data_fim']:
+            data_fim = form.cleaned_data['data_fim']
+
+    # --- CORREÇÃO AQUI: Usar 'R' e 'D' ---
+
+    # 1. RECEITAS (Busca por 'R')
+    receitas = Transacao.objects.filter(
+        categoria__tipo='R',  # <--- CORRIGIDO
+        data__range=[data_inicio, data_fim]
+    ).values('categoria__nome').annotate(total=Sum('valor')).order_by('-total')
+
+    total_receitas = Transacao.objects.filter(
+        categoria__tipo='R', # <--- CORRIGIDO
+        data__range=[data_inicio, data_fim]
+    ).aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # 2. DESPESAS DE CONTA (Busca por 'D')
+    despesas_conta = Transacao.objects.filter(
+        categoria__tipo='D', # <--- CORRIGIDO
+        data__range=[data_inicio, data_fim]
+    ).values('categoria__nome').annotate(total=Sum('valor')).order_by('-total')
+
+    total_despesas_conta = Transacao.objects.filter(
+        categoria__tipo='D', # <--- CORRIGIDO
+        data__range=[data_inicio, data_fim]
+    ).aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # 3. CARTÃO DE CRÉDITO (Mantém igual)
+    gastos_cartao = CompraCartao.objects.filter(
+        data_compra__range=[data_inicio, data_fim]
+    ).aggregate(Sum('valor'))['valor__sum'] or 0
+
+    # 4. TOTAIS
+    total_despesas_geral = total_despesas_conta + gastos_cartao
+    saldo = total_receitas - total_despesas_geral
+
+    context = {
+        'form': form,
+        'receitas': receitas,
+        'despesas_conta': despesas_conta,
+        'total_receitas': total_receitas,
+        'total_despesas_conta': total_despesas_conta,
+        'total_cartao': gastos_cartao,
+        'total_despesas_geral': total_despesas_geral,
+        'saldo': saldo,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+    }
+
+    return render(request, 'core/relatorio.html', context)
