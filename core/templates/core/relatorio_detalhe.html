@@ -1,0 +1,80 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-0">
+                <i class="fas fa-list"></i> {{ titulo }}
+            </h4>
+            <p class="text-muted small">
+                Período: {{ data_inicio|date:"d/m/Y" }} até {{ data_fim|date:"d/m/Y" }}
+            </p>
+        </div>
+        <a href="{% url 'relatorio' %}?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Data</th>
+                        {% if is_cartao %}
+                            <th>Cartão</th>
+                        {% endif %}
+                        <th>Descrição</th>
+                        {% if is_cartao %}
+                            <th class="text-center">Parc.</th>
+                        {% endif %}
+                        <th class="text-end">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in transacoes %}
+                    <tr>
+                        <td>
+                            {% if is_cartao %}
+                                {{ item.data_compra|date:"d/m/Y" }}
+                            {% else %}
+                                {{ item.data|date:"d/m/Y" }}
+                            {% endif %}
+                        </td>
+                        
+                        {% if is_cartao %}
+                            <td>
+                                <span class="badge text-bg-secondary">{{ item.cartao.apelido }}</span>
+                            </td>
+                        {% endif %}
+
+                        <td>{{ item.descricao|default:"-" }}</td>
+
+                        {% if is_cartao %}
+                            <td class="text-center">
+                                {% if item.is_parcelado %}
+                                    <i class="fas fa-calendar-alt text-warning" title="Parcelado"></i>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        {% endif %}
+
+                        <td class="text-end fw-bold">R$ {{ item.valor|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center p-3">Nenhum registro encontrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="{% if is_cartao %}4{% else %}2{% endif %}" class="fw-bold text-end">TOTAL</td>
+                        <td class="fw-bold text-end">R$ {{ total|floatformat:2 }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

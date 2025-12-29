@@ -14,5 +14,6 @@ urlpatterns = [
     path('terceiros/<int:terceiro_id>/', views.detalhe_terceiro, name='detalhe_terceiro'),
     path('api/criar-terceiro/', views.criar_terceiro_rapido, name='criar_terceiro_rapido'),
     path('relatorio/', views.relatorio_financeiro, name='relatorio'),
-    
+    path('relatorio/detalhes/<int:categoria_id>/', views.relatorio_detalhe_categoria, name='relatorio_detalhe'),
+    path('relatorio/detalhes-cartao/', views.relatorio_detalhe_cartao, name='relatorio_detalhe_cartao'),
 ]

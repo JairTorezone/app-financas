@@ -1,174 +1,221 @@
-{% extends 'core/base.html' %}
-{% load static %}
-
-{% block content %}
+{% extends 'core/base.html' %} {% load static %} {% block content %}
 <div class="container-fluid">
-    <div class="row mb-4 align-items-end">
-        <div class="col-md-6">
-            <h2 class="fw-bold text-dark"><i class="fas fa-chart-line"></i> Relatório Financeiro</h2>
-            <p class="text-muted mb-0">
-                Exibindo dados de <strong>{{ data_inicio|date:"d/m/Y" }}</strong> até <strong>{{ data_fim|date:"d/m/Y" }}</strong>
-            </p>
-        </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-2">
-                    <form method="get" class="row g-2 align-items-end">
-                        <div class="col-4">
-                            <label class="small fw-bold text-muted">Data Início</label>
-                            {{ form.data_inicio }}
-                        </div>
-                        <div class="col-4">
-                            <label class="small fw-bold text-muted">Data Fim</label>
-                            {{ form.data_fim }}
-                        </div>
-                        <div class="col-4">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-filter"></i> Filtrar
-                            </button>
-                        </div>
-                    </form>
-                </div>
+  <div class="row mb-4 align-items-end">
+    <div class="col-md-6">
+      <h2 class="fw-bold text-dark">
+        <i class="fas fa-chart-line"></i> Relatório Financeiro
+      </h2>
+      <p class="text-muted mb-0">
+        Exibindo dados de <strong>{{ data_inicio|date:"d/m/Y" }}</strong> até
+        <strong>{{ data_fim|date:"d/m/Y" }}</strong>
+      </p>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-2">
+          <form method="get" class="row g-2 align-items-end">
+            <div class="col-4">
+              <label class="small fw-bold text-muted">Data Início</label>
+              {{ form.data_inicio }}
             </div>
+            <div class="col-4">
+              <label class="small fw-bold text-muted">Data Fim</label>
+              {{ form.data_fim }}
+            </div>
+            <div class="col-4">
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-filter"></i> Filtrar
+              </button>
+            </div>
+          </form>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div
+        class="card border-0 shadow-sm h-100"
+        style="border-left: 5px solid #198754 !important"
+      >
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-uppercase text-muted mb-1">Total Receitas</h6>
+              <h3 class="fw-bold text-success mb-0">
+                R$ {{ total_receitas|floatformat:2 }}
+              </h3>
+            </div>
+            <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+              <i class="fas fa-arrow-up text-success fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #198754 !important;">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase text-muted mb-1">Total Receitas</h6>
-                            <h3 class="fw-bold text-success mb-0">R$ {{ total_receitas|floatformat:2 }}</h3>
-                        </div>
-                        <div class="bg-success bg-opacity-10 p-3 rounded-circle">
-                            <i class="fas fa-arrow-up text-success fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
+    <div class="col-md-4">
+      <div
+        class="card border-0 shadow-sm h-100"
+        style="border-left: 5px solid #dc3545 !important"
+      >
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-uppercase text-muted mb-1">Total Despesas</h6>
+              <h3 class="fw-bold text-danger mb-0">
+                R$ {{ total_despesas_geral|floatformat:2 }}
+              </h3>
+              <small class="text-muted" style="font-size: 0.8rem">
+                (Contas: {{ total_despesas_conta|floatformat:2 }} + Cartão: {{
+                total_cartao|floatformat:2 }})
+              </small>
             </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #dc3545 !important;">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase text-muted mb-1">Total Despesas</h6>
-                            <h3 class="fw-bold text-danger mb-0">R$ {{ total_despesas_geral|floatformat:2 }}</h3>
-                            <small class="text-muted" style="font-size: 0.8rem;">
-                                (Contas: {{ total_despesas_conta|floatformat:2 }} + Cartão: {{ total_cartao|floatformat:2 }})
-                            </small>
-                        </div>
-                        <div class="bg-danger bg-opacity-10 p-3 rounded-circle">
-                            <i class="fas fa-arrow-down text-danger fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
+            <div class="bg-danger bg-opacity-10 p-3 rounded-circle">
+              <i class="fas fa-arrow-down text-danger fa-2x"></i>
             </div>
+          </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100" style="border-left: 5px solid #0d6efd !important;">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase text-muted mb-1">Saldo do Período</h6>
-                            {% if saldo < 0 %}
-                                <h3 class="fw-bold text-danger mb-0">R$ {{ saldo|floatformat:2 }}</h3>
-                            {% else %}
-                                <h3 class="fw-bold text-primary mb-0">R$ {{ saldo|floatformat:2 }}</h3>
-                            {% endif %}
-                        </div>
-                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
-                            <i class="fas fa-wallet text-primary fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-coins"></i> Origem das Receitas</h5>
-                </div>
-                <div class="card-body p-0">
-                    {% if receitas %}
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Categoria</th>
-                                        <th class="text-end">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in receitas %}
-                                    <tr>
-                                        <td>{{ item.categoria__nome }}</td>
-                                        <td class="text-end fw-bold text-success">R$ {{ item.total|floatformat:2 }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="p-4 text-center text-muted">
-                            <i class="fas fa-search mb-2 fa-2x"></i>
-                            <p>Nenhuma receita encontrada neste período.</p>
-                        </div>
-                    {% endif %}
-                </div>
+    <div class="col-md-4">
+      <div
+        class="card border-0 shadow-sm h-100"
+        style="border-left: 5px solid #0d6efd !important"
+      >
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="text-uppercase text-muted mb-1">Saldo do Período</h6>
+              {% if saldo < 0 %}
+              <h3 class="fw-bold text-danger mb-0">
+                R$ {{ saldo|floatformat:2 }}
+              </h3>
+              {% else %}
+              <h3 class="fw-bold text-primary mb-0">
+                R$ {{ saldo|floatformat:2 }}
+              </h3>
+              {% endif %}
             </div>
-        </div>
-
-        <div class="col-md-6 mb-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0"><i class="fas fa-receipt"></i> Detalhe das Despesas</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Tipo / Categoria</th>
-                                    <th class="text-end">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if total_cartao > 0 %}
-                                <tr class="table-warning">
-                                    <td><i class="fas fa-credit-card me-2"></i> Fatura Cartão de Crédito</td>
-                                    <td class="text-end fw-bold text-danger">R$ {{ total_cartao|floatformat:2 }}</td>
-                                </tr>
-                                {% endif %}
-
-                                {% for item in despesas_conta %}
-                                <tr>
-                                    <td>{{ item.categoria__nome }}</td>
-                                    <td class="text-end fw-bold text-danger">R$ {{ item.total|floatformat:2 }}</td>
-                                </tr>
-                                {% empty %}
-                                    {% if total_cartao == 0 %}
-                                    <tr>
-                                        <td colspan="2" class="text-center p-4 text-muted">
-                                            <i class="fas fa-smile mb-2 fa-2x"></i>
-                                            <p class="mb-0">Nenhuma despesa neste período.</p>
-                                        </td>
-                                    </tr>
-                                    {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+              <i class="fas fa-wallet text-primary fa-2x"></i>
             </div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 mb-4">
+      <div class="card shadow border-0 h-100">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="fas fa-coins"></i> Origem das Receitas</h5>
+        </div>
+        <div class="card-body p-0">
+          {% if receitas %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Categoria</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in receitas %}
+                <tr>
+                  <td>
+                    <a
+                      href="{% url 'relatorio_detalhe' item.categoria__id %}?data_inicio={{ data_inicio|date:'Y-m-d' }}&data_fim={{ data_fim|date:'Y-m-d' }}"
+                      class="text-decoration-none fw-bold text-dark"
+                    >
+                      {{ item.categoria__nome }}
+                      <i class="fas fa-search-plus small text-muted ms-1"></i>
+                    </a>
+                  </td>
+                  <td class="text-end fw-bold text-success">
+                    R$ {{ item.total|floatformat:2 }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="p-4 text-center text-muted">
+            <i class="fas fa-search mb-2 fa-2x"></i>
+            <p>Nenhuma receita encontrada neste período.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+      <div class="card shadow border-0 h-100">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-receipt"></i> Detalhe das Despesas
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Tipo / Categoria</th>
+                  <th class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if total_cartao > 0 %}
+                <tr class="table-warning">
+                  <td>
+                    <a
+                      href="{% url 'relatorio_detalhe_cartao' %}?data_inicio={{ data_inicio|date:'Y-m-d' }}&data_fim={{ data_fim|date:'Y-m-d' }}"
+                      class="text-decoration-none fw-bold text-dark"
+                    >
+                      <i class="fas fa-credit-card me-2"></i> Fatura Cartão de
+                      Crédito
+                      <i class="fas fa-search-plus small text-muted ms-1"></i>
+                    </a>
+                  </td>
+                  <td class="text-end fw-bold text-danger">
+                    R$ {{ total_cartao|floatformat:2 }}
+                  </td>
+                </tr>
+                {% endif %} {% for item in despesas_conta %}
+                <tr>
+                  <td>
+                    <a
+                      href="{% url 'relatorio_detalhe' item.categoria__id %}?data_inicio={{ data_inicio|date:'Y-m-d' }}&data_fim={{ data_fim|date:'Y-m-d' }}"
+                      class="text-decoration-none fw-bold text-dark"
+                    >
+                      {{ item.categoria__nome }}
+                      <i class="fas fa-search-plus small text-muted ms-1"></i>
+                    </a>
+                  </td>
+                  <td class="text-end fw-bold text-danger">
+                    R$ {{ item.total|floatformat:2 }}
+                  </td>
+                </tr>
+                {% empty %} {% if total_cartao == 0 %}
+                <tr>
+                  <td colspan="2" class="text-center p-4 text-muted">
+                    <i class="fas fa-smile mb-2 fa-2x"></i>
+                    <p class="mb-0">Nenhuma despesa neste período.</p>
+                  </td>
+                </tr>
+                {% endif %} {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

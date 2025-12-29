@@ -402,6 +402,8 @@ def detalhe_terceiro(request, terceiro_id):
         'ano': ano
     })
 
+# core/views.py
+
 @login_required
 def relatorio_financeiro(request):
     import calendar
@@ -420,32 +422,38 @@ def relatorio_financeiro(request):
         if form.cleaned_data['data_fim']:
             data_fim = form.cleaned_data['data_fim']
 
-    # --- CORREÇÃO AQUI: Usar 'R' e 'D' ---
+    # --- CONSULTAS BLINDADAS (USUARIO=REQUEST.USER) ---
 
-    # 1. RECEITAS (Busca por 'R')
+    # 1. RECEITAS
     receitas = Transacao.objects.filter(
-        categoria__tipo='R',  # <--- CORRIGIDO
+        usuario=request.user,  # <--- SEGURANÇA: Só do usuário logado
+        categoria__tipo='R',
         data__range=[data_inicio, data_fim]
-    ).values('categoria__nome').annotate(total=Sum('valor')).order_by('-total')
+    ).values('categoria__nome', 'categoria__id').annotate(total=Sum('valor')).order_by('-total')
 
     total_receitas = Transacao.objects.filter(
-        categoria__tipo='R', # <--- CORRIGIDO
+        usuario=request.user, # <--- SEGURANÇA
+        categoria__tipo='R',
         data__range=[data_inicio, data_fim]
     ).aggregate(Sum('valor'))['valor__sum'] or 0
 
-    # 2. DESPESAS DE CONTA (Busca por 'D')
+    # 2. DESPESAS DE CONTA
     despesas_conta = Transacao.objects.filter(
-        categoria__tipo='D', # <--- CORRIGIDO
+        usuario=request.user, # <--- SEGURANÇA
+        categoria__tipo='D',
         data__range=[data_inicio, data_fim]
-    ).values('categoria__nome').annotate(total=Sum('valor')).order_by('-total')
+    ).values('categoria__nome', 'categoria__id').annotate(total=Sum('valor')).order_by('-total')
 
     total_despesas_conta = Transacao.objects.filter(
-        categoria__tipo='D', # <--- CORRIGIDO
+        usuario=request.user, # <--- SEGURANÇA
+        categoria__tipo='D',
         data__range=[data_inicio, data_fim]
     ).aggregate(Sum('valor'))['valor__sum'] or 0
 
-    # 3. CARTÃO DE CRÉDITO (Mantém igual)
+    # 3. CARTÃO DE CRÉDITO
+    # CompraCartao -> CartaoCredito -> Usuario
     gastos_cartao = CompraCartao.objects.filter(
+        cartao__usuario=request.user, # <--- SEGURANÇA
         data_compra__range=[data_inicio, data_fim]
     ).aggregate(Sum('valor'))['valor__sum'] or 0
 
@@ -467,3 +475,56 @@ def relatorio_financeiro(request):
     }
 
     return render(request, 'core/relatorio.html', context)
+
+@login_required
+def relatorio_detalhe_categoria(request, categoria_id):
+    data_inicio_str = request.GET.get('data_inicio')
+    data_fim_str = request.GET.get('data_fim')
+    
+    # SEGURANÇA: Garante que a categoria pertence ao usuário (ou é global se você usar sistema misto)
+    # Aqui assumo que Categorias são do usuário ou globais acessíveis. 
+    # Melhor filtrar a transação pelo usuário direto:
+    
+    categoria = get_object_or_404(Categoria, id=categoria_id) # Precisamos importar get_object_or_404
+    
+    transacoes = Transacao.objects.filter(
+        usuario=request.user, # <--- SEGURANÇA
+        categoria_id=categoria_id,
+        data__range=[data_inicio_str, data_fim_str]
+    ).order_by('data')
+    
+    total = transacoes.aggregate(Sum('valor'))['valor__sum'] or 0
+
+    context = {
+        'titulo': f"Detalhes: {categoria.nome}",
+        'transacoes': transacoes,
+        'total': total,
+        'data_inicio': data_inicio_str,
+        'data_fim': data_fim_str,
+        'is_cartao': False # Flag para o template saber que é tabela de transação comum
+    }
+    return render(request, 'core/relatorio_detalhe.html', context)
+
+# --- NOVA VIEW PARA CARTÃO ---
+@login_required
+def relatorio_detalhe_cartao(request):
+    data_inicio_str = request.GET.get('data_inicio')
+    data_fim_str = request.GET.get('data_fim')
+    
+    # Filtra COMPRAS DE CARTÃO do usuário
+    compras = CompraCartao.objects.filter(
+        cartao__usuario=request.user, # <--- SEGURANÇA
+        data_compra__range=[data_inicio_str, data_fim_str]
+    ).order_by('data_compra')
+    
+    total = compras.aggregate(Sum('valor'))['valor__sum'] or 0
+
+    context = {
+        'titulo': "Detalhes: Fatura Cartão de Crédito",
+        'transacoes': compras, # Mandamos as compras na variavel 'transacoes' para reutilizar o template
+        'total': total,
+        'data_inicio': data_inicio_str,
+        'data_fim': data_fim_str,
+        'is_cartao': True # Flag para mudar as colunas no HTML
+    }
+    return render(request, 'core/relatorio_detalhe.html', context)
