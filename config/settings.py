@@ -146,3 +146,12 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # Em vez de enviar e-mail real, mostra no Terminal do VS Code
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# --- CONFIGURAÇÃO PARA PRODUÇÃO (FUTURO - Gmail) ---
+# Quando for para o ar, trocaremos para estas configurações:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'seu-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'senha-de-app-do-google' # Não é sua senha normal
