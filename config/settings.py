@@ -144,22 +144,24 @@ SESSION_SAVE_EVERY_REQUEST = True
 # Após fechar o navegador, desloga (Opcional, se quiser segurança máxima)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-# config/settings.py
 
-import os
 
 # --- CONFIGURAÇÃO DE E-MAIL BLINDADA ---
 if os.environ.get('RENDER'):
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp-relay.brevo.com' # Servidor do Brevo
+    EMAIL_HOST = 'smtp-relay.brevo.com'
     EMAIL_PORT = 587
     EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
     
-    # As credenciais virão das Variáveis de Ambiente do Render
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') 
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+    # Autenticação (O "Crachá" para entrar no servidor)
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')      # Vai pegar o 9efbf... do Render
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') # Vai pegar a chave
+
+    # Remetente (Quem "assina" o email para o usuário ver)
+    # Coloque aqui o seu email gmail que você usou para criar a conta no Brevo
+    DEFAULT_FROM_EMAIL = 'jairtorezone@gmail.com' 
     
-    # O remetente deve ser o email que você cadastrou no Brevo
-    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
+    EMAIL_TIMEOUT = 30
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
