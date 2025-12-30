@@ -35,9 +35,9 @@ class Transacao(models.Model):
 class CartaoCredito(models.Model):
     CORES_CHOICES = (
         ('#820AD1', 'Roxo (Nubank)'),
-        ('#FF8700', 'Laranja (Itaú)'),
+        ('#FF8700', 'Laranja (Inter/Itaú)'),
         ('#CC092F', 'Vermelho (Bradesco/Santander)'),
-        ('#FFD700', 'Dourado/Amarelo (Inter)'),
+        ('#FFD700', 'Dourado/Amarelo'),
         ('#005CAA', 'Azul (Caixa/Azul)'),
         ('#000000', 'Preto (Black/C6)'),
         ('#28a745', 'Verde (Padrão)'),
