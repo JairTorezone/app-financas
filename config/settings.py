@@ -150,21 +150,16 @@ import os
 
 # --- CONFIGURAÇÃO DE E-MAIL BLINDADA ---
 if os.environ.get('RENDER'):
-    # Configuração Padrão Recomendada para Gmail
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.gmail.com'
-    
-    # Vamos voltar para 587 (TLS) que é o padrão mundial, 
-    # mas garantindo que o TLS esteja True e SSL False.
+    EMAIL_HOST = 'smtp-relay.brevo.com' # Servidor do Brevo
     EMAIL_PORT = 587
     EMAIL_USE_TLS = True
-    EMAIL_USE_SSL = False
     
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+    # As credenciais virão das Variáveis de Ambiente do Render
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') 
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
     
-    # Timeout para não travar o servidor (importante!)
-    EMAIL_TIMEOUT = 30
+    # O remetente deve ser o email que você cadastrou no Brevo
+    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
