@@ -144,24 +144,27 @@ SESSION_SAVE_EVERY_REQUEST = True
 # Após fechar o navegador, desloga (Opcional, se quiser segurança máxima)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-# settings.py
+# config/settings.py
 
-# ... no final do arquivo ...
+import os
 
-# Em vez de enviar e-mail real, mostra no Terminal do VS Code
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
+# --- CONFIGURAÇÃO DE E-MAIL BLINDADA ---
 if os.environ.get('RENDER'):
+    # Configuração Padrão Recomendada para Gmail
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.gmail.com'
     
-    # MUDANÇA AQUI: Usar SSL na porta 465
-    EMAIL_PORT = 465
-    EMAIL_USE_SSL = True  # <--- SSL ligado
-    EMAIL_USE_TLS = False # <--- TLS desligado
+    # Vamos voltar para 587 (TLS) que é o padrão mundial, 
+    # mas garantindo que o TLS esteja True e SSL False.
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
     
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
     DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
+    
+    # Timeout para não travar o servidor (importante!)
+    EMAIL_TIMEOUT = 30
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
