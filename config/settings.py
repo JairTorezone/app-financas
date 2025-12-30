@@ -151,20 +151,16 @@ if os.environ.get('RENDER'):
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp-relay.brevo.com'
     
-    # --- MUDANÇA CRÍTICA AQUI ---
-    EMAIL_PORT = 465          # Porta segura SSL
-    EMAIL_USE_SSL = True      # SSL Ligado
-    EMAIL_USE_TLS = False     # TLS Desligado
-    # -----------------------------
+    # --- CONFIGURAÇÃO CORRETA PARA BREVO ---
+    EMAIL_PORT = 587          # Porta TLS (não SSL)
+    EMAIL_USE_TLS = True      # TLS Ligado
+    EMAIL_USE_SSL = False     # SSL Desligado
+    # ----------------------------------------
     
-    # As variáveis continuam pegando do Render
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
     
-    # Força o remetente a ser seu email (para o usuário reconhecer)
-    # Coloque aqui o seu email real, ex: jairtorezone@gmail.com
-    DEFAULT_FROM_EMAIL = 'jairtorezone@gmail.com' 
-    
+    DEFAULT_FROM_EMAIL = 'jairtorezone@gmail.com'
     EMAIL_TIMEOUT = 30
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
