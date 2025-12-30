@@ -148,19 +148,8 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # --- CONFIGURAÇÃO DE E-MAIL BLINDADA ---
 if os.environ.get('RENDER'):
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp-relay.brevo.com'
-    
-    # --- CONFIGURAÇÃO CORRETA PARA BREVO ---
-    EMAIL_PORT = 587          # Porta TLS (não SSL)
-    EMAIL_USE_TLS = True      # TLS Ligado
-    EMAIL_USE_SSL = False     # SSL Desligado
-    # ----------------------------------------
-    
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-    
+    EMAIL_BACKEND = 'core.email_backend.BrevoBackend'
+    BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
     DEFAULT_FROM_EMAIL = 'jairtorezone@gmail.com'
-    EMAIL_TIMEOUT = 30
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
