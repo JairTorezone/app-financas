@@ -2,8 +2,8 @@
 
 {% block content %}
 <style>
-    /* CSS dos Radio Buttons */
-    #id_is_parcelado, #id_is_terceiro {
+    /* CSS dos Radio Buttons (Genérico para listas ul/li) */
+    #id_is_parcelado, #id_is_terceiro, #id_tipo_custo {
         display: flex !important;
         flex-direction: row !important;
         gap: 20px;
@@ -11,8 +11,8 @@
         padding-left: 0 !important;
         margin-bottom: 5px;
     }
-    #id_is_parcelado li, #id_is_terceiro li { display: flex; align-items: center; }
-    #id_is_parcelado li label, #id_is_terceiro li label { margin-left: 6px; font-weight: normal; cursor: pointer; }
+    #id_is_parcelado li, #id_is_terceiro li, #id_tipo_custo li { display: flex; align-items: center; }
+    #id_is_parcelado li label, #id_is_terceiro li label, #id_tipo_custo li label { margin-left: 6px; font-weight: normal; cursor: pointer; }
     input[type="radio"] { transform: scale(1.2); cursor: pointer; }
 
     /* Campo Condicional */
@@ -72,7 +72,8 @@
                     
                     {% for field in form %}
                         {% if field.name == 'qtd_parcelas' or field.name == 'terceiro' %}
-                            {% elif field.name == 'is_parcelado' %}
+                            
+                        {% elif field.name == 'is_parcelado' %}
                             <div class="mb-3">
                                 <label class="form-label fw-bold d-block">{{ field.label }}</label>
                                 {{ field }} 
@@ -97,6 +98,27 @@
                                     {% if form.terceiro.errors %}
                                         <div class="text-danger small">{{ form.terceiro.errors }}</div>
                                     {% endif %}
+                                </div>
+                            </div>
+
+                        {% elif field.name == 'tipo_custo' %}
+                          <div class="mb-3">
+                                <label class="form-label fw-bold d-block">{{ field.label }}</label>
+                                <div class="d-flex gap-3 mt-1">
+                                    {% for radio in field %}
+                                        <div class="form-check">
+                                            <input type="radio" 
+                                                   name="{{ field.html_name }}" 
+                                                   value="{{ radio.data.value }}" 
+                                                   class="form-check-input" 
+                                                   id="{{ radio.id_for_label }}" 
+                                                   {% if radio.data.selected %}checked{% endif %}>
+                                            
+                                            <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                                {{ radio.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
                                 </div>
                             </div>
 

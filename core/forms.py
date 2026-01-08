@@ -152,13 +152,14 @@ class TransacaoForm(MoneyCleanMixin, forms.ModelForm): # Adicione o Mixin aqui
 
     class Meta:
         model = Transacao
-        fields = ['categoria','descricao', 'valor', 'data',  'observacao']
+        fields = ['categoria','descricao', 'valor', 'data', 'tipo_custo',  'observacao']
         widgets = {
             'data': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'descricao': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Salário, Conta de Luz'}),
             # valor removido daqui
             'categoria': forms.Select(attrs={'class': 'form-select'}),
             'observacao': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'tipo_custo': forms.RadioSelect(attrs={'class': 'btn-check'}),
         }
 
     def __init__(self, *args, **kwargs):

@@ -11,7 +11,7 @@
                 Período: {{ data_inicio|date:"d/m/Y" }} até {{ data_fim|date:"d/m/Y" }}
             </p>
         </div>
-        <a href="{% url 'relatorio' %}?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="btn btn-secondary">
+        <a href="javascript:history.back()" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Voltar
         </a>
     </div>

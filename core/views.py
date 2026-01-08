@@ -16,6 +16,7 @@ from django.db.models import ProtectedError
 from django.contrib import messages
 
 from django.shortcuts import get_object_or_404
+from dateutil.relativedelta import relativedelta
 
 @login_required
 def home(request):
@@ -96,7 +97,7 @@ def home(request):
      .annotate(total=Sum('valor'))
     
     lista_despesas = list(despesas_query)
-    
+
     # Adiciona o total do cartão como uma "categoria"
     if total_cartao > 0:
         lista_despesas.append({
@@ -802,3 +803,65 @@ def editar_item_config(request, tipo, id_item):
         'form': form,
         'titulo': f'Editar {tipo.capitalize()}'
     })
+
+@login_required
+def copiar_despesas_fixas(request):
+    # 1. Pega o mês/ano de DESTINO (que está na URL ou é o atual)
+    try:
+        mes_atual = int(request.GET.get('mes', date.today().month))
+        ano_atual = int(request.GET.get('ano', date.today().year))
+    except:
+        mes_atual = date.today().month
+        ano_atual = date.today().year
+
+    data_atual = date(ano_atual, mes_atual, 1)
+    
+    # 2. Calcula o mês ANTERIOR (Origem)
+    data_anterior = data_atual - relativedelta(months=1)
+    
+    # 3. Busca as despesas FIXAS do mês anterior
+    despesas_fixas_anterior = Transacao.objects.filter(
+        usuario=request.user,
+        categoria__tipo='D', # Apenas Despesas
+        tipo_custo='F',      # Apenas as marcadas como FIXA ('F')
+        data__month=data_anterior.month,
+        data__year=data_anterior.year
+    )
+    
+    if not despesas_fixas_anterior.exists():
+        messages.warning(request, "Nenhuma despesa fixa encontrada no mês passado para copiar.")
+        return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
+
+    # 4. Cria as cópias no mês ATUAL
+    contador = 0
+    for despesa in despesas_fixas_anterior:
+        # Verifica se já não existe uma igual neste mês (para evitar duplicar se clicar 2x)
+        # Critério: Mesma descrição e mesmo valor (pode ajustar se quiser)
+        ja_existe = Transacao.objects.filter(
+            usuario=request.user,
+            descricao=despesa.descricao,
+            valor=despesa.valor,
+            data__month=mes_atual,
+            data__year=ano_atual
+        ).exists()
+        
+        if not ja_existe:
+            # Cria a cópia
+            nova_despesa = Transacao.objects.create(
+                usuario=request.user,
+                categoria=despesa.categoria,
+                descricao=despesa.descricao,
+                valor=despesa.valor,
+                tipo_custo='F', # Continua sendo fixa
+                observacao=f"Copiado de {data_anterior.strftime('%m/%Y')}",
+                # Mantém o mesmo dia (ex: dia 05), mas no mês/ano atual
+                data=date(ano_atual, mes_atual, despesa.data.day) 
+            )
+            contador += 1
+
+    if contador > 0:
+        messages.success(request, f"{contador} despesas fixas copiadas com sucesso!")
+    else:
+        messages.info(request, "As despesas fixas do mês passado já foram lançadas neste mês.")
+
+    return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
