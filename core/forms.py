@@ -208,7 +208,6 @@ class CadastroForm(UserCreationForm):
             raise forms.ValidationError("Este e-mail já está cadastrado. Tente recuperar sua senha.")
         return email
 
-
 class RelatorioFiltroForm(forms.Form):
     data_inicio = forms.DateField(
         required=False, 
@@ -220,3 +219,21 @@ class RelatorioFiltroForm(forms.Form):
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         label="Data Fim"
     )
+
+class CategoriaForm(forms.ModelForm):
+    class Meta:
+        model = Categoria
+        fields = ['nome', 'tipo']
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control'}),
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+class TerceiroForm(forms.ModelForm):
+    class Meta:
+        model = Terceiro
+        fields = ['nome', 'relacionamento']
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control'}),
+            'relacionamento': forms.TextInput(attrs={'class': 'form-control'}),
+        }

@@ -26,4 +26,9 @@ urlpatterns = [
     path('excluir/<str:tipo>/<int:id_item>/', views.excluir_item, name='excluir_item'),
     path('compra/editar/<int:compra_id>/', views.editar_compra, name='editar_compra'),
     path('compra/excluir/<int:compra_id>/', views.excluir_compra, name='excluir_compra'),
+    path('transacao/editar/<int:id_transacao>/', views.editar_transacao, name='editar_transacao'),
+    path('transacao/excluir/<int:id_transacao>/', views.excluir_transacao, name='excluir_transacao'),
+
+    # Nova rota Genérica para Editar Configurações (Renomear)
+    path('config/editar/<str:tipo>/<int:id_item>/', views.editar_item_config, name='editar_item_config'),
 ]

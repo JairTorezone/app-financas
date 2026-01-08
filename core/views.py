@@ -7,7 +7,9 @@ from datetime import date
 import json
 
 from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
-from .forms import CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm, RelatorioFiltroForm
+from .forms import (
+    CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm, RelatorioFiltroForm, CategoriaForm, TerceiroForm)
+
 from django.contrib.auth import login
 
 from django.db.models import ProtectedError
@@ -76,25 +78,25 @@ def home(request):
 
     # --- 3. Listas Detalhadas ---
     
-    # Lista de Receitas
+    # Lista de Receitas: ADICIONADO 'categoria__id' no values()
     receitas_detalhadas = Transacao.objects.filter(
         usuario=request.user, 
         categoria__tipo='R', 
         **filtro_data
-    ).values('categoria__nome')\
+    ).values('categoria__nome', 'categoria__id')\
      .annotate(total=Sum('valor'))\
      .order_by('-total')
 
-    # Lista de Despesas (Banco)
+    # Lista de Despesas (Banco): ADICIONADO 'categoria__id' no values()
     despesas_query = Transacao.objects.filter(
         usuario=request.user, 
         categoria__tipo='D', 
         **filtro_data
-    ).values('categoria__nome')\
+    ).values('categoria__nome', 'categoria__id')\
      .annotate(total=Sum('valor'))
     
     lista_despesas = list(despesas_query)
-
+    
     # Adiciona o total do cartão como uma "categoria"
     if total_cartao > 0:
         lista_despesas.append({
@@ -131,7 +133,6 @@ def home(request):
     }
 
     return render(request, 'core/home.html', contexto)
-
 
 @login_required
 def detalhe_cartao(request):
@@ -203,7 +204,6 @@ def adicionar_transacao(request, tipo):
         )
 
     return render(request, 'core/form_generico.html', {'form': form, 'titulo': titulo})
-
 
 @login_required
 def adicionar_compra(request):
@@ -735,3 +735,70 @@ def excluir_compra(request, compra_id):
     # Se você estava na tela de detalhes da fatura, o ideal seria voltar pra lá.
     # Mas como simplificação, voltamos para a Home filtrada no mês.
     return redirect(f"/?mes={mes}&ano={ano}")
+
+@login_required
+def editar_transacao(request, id_transacao):
+    # Busca a transação garantindo que é do usuário
+    transacao = get_object_or_404(Transacao, id=id_transacao, usuario=request.user)
+    
+    # Descobre o tipo (R ou D) baseado na categoria atual para filtrar o form corretamente
+    tipo_atual = transacao.categoria.tipo if transacao.categoria else 'D'
+    
+    if request.method == 'POST':
+        form = TransacaoForm(request.POST, instance=transacao, tipo_filtro=tipo_atual, user=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect(f"/?mes={transacao.data.month}&ano={transacao.data.year}")
+    else:
+        form = TransacaoForm(instance=transacao, tipo_filtro=tipo_atual, user=request.user)
+    
+    tipo_label = "Receita" if tipo_atual == 'R' else "Despesa"
+    
+    return render(request, 'core/form_generico.html', {
+        'form': form, 
+        'titulo': f'Editar {tipo_label}'
+    })
+
+@login_required
+def excluir_transacao(request, id_transacao):
+    transacao = get_object_or_404(Transacao, id=id_transacao, usuario=request.user)
+    
+    mes = transacao.data.month
+    ano = transacao.data.year
+    
+    transacao.delete()
+    messages.success(request, "Item excluído com sucesso.")
+    
+    return redirect(f"/?mes={mes}&ano={ano}")
+
+@login_required
+def editar_item_config(request, tipo, id_item):
+    # Dicionário de configuração: mapeia a string da URL para (Modelo, Form)
+    config = {
+        'categoria': (Categoria, CategoriaForm),
+        'cartao': (CartaoCredito, CartaoCreditoForm),
+        'terceiro': (Terceiro, TerceiroForm)
+    }
+    
+    # Verifica se o tipo é válido
+    if tipo not in config:
+        return redirect('gerenciar_cadastros')
+    
+    Modelo, FormClass = config[tipo]
+    
+    # Busca o objeto (segurança por usuário)
+    obj = get_object_or_404(Modelo, id=id_item, usuario=request.user)
+    
+    if request.method == 'POST':
+        form = FormClass(request.POST, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Alteração salva com sucesso!")
+            return redirect('gerenciar_cadastros')
+    else:
+        form = FormClass(instance=obj)
+    
+    return render(request, 'core/form_generico.html', {
+        'form': form,
+        'titulo': f'Editar {tipo.capitalize()}'
+    })
