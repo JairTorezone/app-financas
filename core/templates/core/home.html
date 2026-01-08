@@ -23,9 +23,24 @@
     </form>
     
     <div class="d-flex gap-2">
-       <a href="{% url 'adicionar_transacao' 'receita' %}?mes={{ mes_atual }}&ano={{ ano_atual }}" class="btn btn-success text-white">
-            <i class="fas fa-plus-circle"></i> Receita
-        </a>
+       <div class="dropdown">
+            <button class="btn btn-success dropdown-toggle text-white" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-plus-circle"></i> Receita
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" href="{% url 'adicionar_transacao' 'receita' %}?mes={{ mes_atual }}&ano={{ ano_atual }}">
+                        <i class="fas fa-plus me-2"></i> Nova Receita
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-success" href="{% url 'copiar_receitas_fixas' %}?mes={{ mes_atual }}&ano={{ ano_atual }}" onclick="return confirm('Copiar receitas FIXAS do mês passado?');">
+                        <i class="fas fa-sync-alt me-2"></i> Copiar do Mês Anterior
+                    </a>
+                </li>
+            </ul>
+        </div>
 
         <div class="dropdown">
             <button class="btn btn-danger dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">

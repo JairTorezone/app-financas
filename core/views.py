@@ -865,3 +865,60 @@ def copiar_despesas_fixas(request):
         messages.info(request, "As despesas fixas do mês passado já foram lançadas neste mês.")
 
     return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
+
+
+@login_required
+def copiar_receitas_fixas(request):
+    try:
+        mes_atual = int(request.GET.get('mes', date.today().month))
+        ano_atual = int(request.GET.get('ano', date.today().year))
+    except:
+        mes_atual = date.today().month
+        ano_atual = date.today().year
+
+    data_atual = date(ano_atual, mes_atual, 1)
+    data_anterior = data_atual - relativedelta(months=1)
+    
+    # Busca RECEITAS ('R') que são FIXAS ('F') do mês anterior
+    receitas_fixas_anterior = Transacao.objects.filter(
+        usuario=request.user,
+        categoria__tipo='R',  # <--- Filtra Receita
+        tipo_custo='F',       # <--- Filtra Fixa
+        data__month=data_anterior.month,
+        data__year=data_anterior.year
+    )
+    
+    if not receitas_fixas_anterior.exists():
+        messages.warning(request, "Nenhuma receita fixa encontrada no mês passado.")
+        return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
+
+    contador = 0
+    for receita in receitas_fixas_anterior:
+        # Verifica duplicidade
+        ja_existe = Transacao.objects.filter(
+            usuario=request.user,
+            descricao=receita.descricao,
+            valor=receita.valor,
+            data__month=mes_atual,
+            data__year=ano_atual,
+            categoria__tipo='R'
+        ).exists()
+        
+        if not ja_existe:
+            Transacao.objects.create(
+                usuario=request.user,
+                categoria=receita.categoria,
+                descricao=receita.descricao,
+                valor=receita.valor,
+                tipo_custo='F',
+                observacao=f"Copiado de {data_anterior.strftime('%m/%Y')}",
+                data=date(ano_atual, mes_atual, receita.data.day) 
+            )
+            contador += 1
+
+    if contador > 0:
+        messages.success(request, f"{contador} receitas copiadas com sucesso!")
+    else:
+        messages.info(request, "Receitas já foram copiadas.")
+
+    return redirect(f"/?mes={mes_atual}&ano={ano_atual}")

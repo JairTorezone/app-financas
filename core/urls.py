@@ -32,5 +32,5 @@ urlpatterns = [
     # Nova rota Genérica para Editar Configurações (Renomear)
     path('config/editar/<str:tipo>/<int:id_item>/', views.editar_item_config, name='editar_item_config'),
     path('transacoes/copiar-fixas/', views.copiar_despesas_fixas, name='copiar_despesas_fixas'),
-
+    path('receitas/copiar-fixas/', views.copiar_receitas_fixas, name='copiar_receitas_fixas'),
 ]

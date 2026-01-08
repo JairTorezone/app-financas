@@ -48,7 +48,10 @@ class CompraCartaoForm(MoneyCleanMixin, forms.ModelForm):
                   'is_terceiro', 'terceiro'] 
         
         widgets = {
-            'data_compra': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'data_compra': forms.DateInput(
+                format='%Y-%m-%d', 
+                attrs={'type': 'date', 'class': 'form-control', 'required': 'required'}
+            ),
             'cartao': forms.Select(attrs={'class': 'form-select'}),
             'descricao': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Padaria, Uber...'}),
             
@@ -154,7 +157,10 @@ class TransacaoForm(MoneyCleanMixin, forms.ModelForm): # Adicione o Mixin aqui
         model = Transacao
         fields = ['categoria','descricao', 'valor', 'data', 'tipo_custo',  'observacao']
         widgets = {
-            'data': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'data': forms.DateInput(
+                format='%Y-%m-%d', 
+                attrs={'type': 'date', 'class': 'form-control', 'required': 'required'}
+            ),
             'descricao': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Salário, Conta de Luz'}),
             # valor removido daqui
             'categoria': forms.Select(attrs={'class': 'form-select'}),
