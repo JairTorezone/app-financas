@@ -206,14 +206,27 @@
             <h5 class="modal-custom-title">Novo Cartão</h5>
             <button type="button" class="btn-close" onclick="fecharModal('modalNovoCartao')"></button>
         </div>
+        
         <div class="mb-3">
             <label class="form-label">Nome do Cartão</label>
             <input type="text" id="cardNome" class="form-control" placeholder="Ex: Nubank">
         </div>
-        <div class="mb-3">
-            <label class="form-label">Últimos 4 Dígitos</label>
-            <input type="text" id="cardDigitos" class="form-control" placeholder="Ex: 1234" maxlength="4">
+
+        <div class="row">
+            <div class="col-6">
+                <div class="mb-3">
+                    <label class="form-label">Últimos 4 Dígitos</label>
+                    <input type="text" id="cardDigitos" class="form-control" placeholder="Ex: 1234" maxlength="4">
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="mb-3">
+                    <label class="form-label">Dia Vencimento</label>
+                    <input type="number" id="cardVencimento" class="form-control" placeholder="Ex: 10" min="1" max="31">
+                </div>
+            </div>
         </div>
+
         <div class="mb-3">
             <label class="form-label">Cor</label>
             <select id="cardCor" class="form-select">
@@ -227,6 +240,7 @@
                 <option value="#28a745">Verde </option>
             </select>
         </div>
+        
         <div class="text-end">
             <button type="button" class="btn btn-secondary" onclick="fecharModal('modalNovoCartao')">Cancelar</button>
             <button type="button" class="btn btn-warning" onclick="salvarCartao()">Salvar</button>
@@ -333,8 +347,14 @@ function salvarCartao() {
     const nome = document.getElementById('cardNome').value.trim();
     const digitos = document.getElementById('cardDigitos').value.trim();
     const cor = document.getElementById('cardCor').value;
+    
+    // Pega o valor ou usa 1 como padrão se estiver vazio
+    const dia_vencimento = document.getElementById('cardVencimento').value || 1;
+
     if(!nome || digitos.length !== 4) { alert("Preencha nome e 4 dígitos!"); return; }
-    enviarDados("/criar-cartao-rapido/", { nome, digitos, cor }, 'cartao');
+    
+    // Agora enviamos o dia_vencimento também
+    enviarDados("/criar-cartao-rapido/", { nome, digitos, cor, dia_vencimento }, 'cartao');
 }
 
 function enviarDados(url, dados, campoNome) {

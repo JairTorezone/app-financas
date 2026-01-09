@@ -49,8 +49,10 @@
         <h3 style="color: {{ fatura.cartao__cor }}; font-weight: bold;">
           R$ {{ fatura.total|floatformat:2 }}
         </h3>
-
-        <small class="text-muted">Toque para filtrar</small>
+         <small class="d-block" style="opacity: 0.9; margin-top: 10px;">
+             <i class="fas fa-calendar-day me-1"></i> 
+             Vencimento dia <strong>{{ fatura.cartao__dia_vencimento }}</strong>
+        </small>
       </div>
     </div>
   </div>

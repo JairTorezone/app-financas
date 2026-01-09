@@ -7,7 +7,7 @@ __pycache__/
 venv/
 env/
 .venv/
-
+venv
 # --- Django ---
 *.log
 local_settings.py
@@ -29,3 +29,20 @@ staticfiles/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# VS Code
+.vscode/
+
+# Banco de Dados (se for sqlite local)
+db.sqlite3
+
+# Windows
+Thumbs.db

@@ -153,7 +153,8 @@ def detalhe_cartao(request):
         'cartao__id', 
         'cartao__nome', 
         'cartao__cor', 
-        'cartao__ultimos_digitos' # <--- FEATURE: Pegando os dígitos
+        'cartao__ultimos_digitos',
+        'cartao__dia_vencimento' # <--- ADICIONE ISSO AQUI
     ).annotate(total=Sum('valor')).order_by('-total')
 
     # 2. Itens individuais (também filtrado por usuário)
@@ -329,6 +330,7 @@ def criar_cartao_rapido(request):
         nome = dados.get('nome')
         digitos = dados.get('digitos')
         cor = dados.get('cor', '#000000')
+        dia_vencimento = dados.get('dia_vencimento', 1) # Pega o dia ou usa 1 padrão
 
         if not nome or not digitos:
             return JsonResponse({'status': 'erro', 'msg': 'Nome e dígitos são obrigatórios'}, status=400)
@@ -338,7 +340,8 @@ def criar_cartao_rapido(request):
             usuario=request.user,
             nome=nome,
             ultimos_digitos=digitos, # Atenção: no seu model o campo chama ultimos_digitos
-            cor=cor
+            cor=cor,
+            dia_vencimento=dia_vencimento
         )
 
         # Retorna formatado para o Select do HTML
@@ -439,7 +442,6 @@ def detalhe_terceiro(request, terceiro_id):
         'mes': mes,
         'ano': ano
     })
-
 
 @login_required
 def relatorio_financeiro(request):

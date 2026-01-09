@@ -185,13 +185,17 @@ class CartaoCreditoForm(forms.ModelForm):
    class Meta:
         model = CartaoCredito
         # Apenas os campos solicitados
-        fields = ['nome', 'ultimos_digitos', 'cor']
+        fields = ['nome', 'ultimos_digitos', 'cor', 'dia_vencimento']
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Nubank, Inter...'}),
             'ultimos_digitos': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 9999', 'maxlength': '4'}),
-            # O campo 'cor' usa Select automaticamente se tiver choices no Model,
-            # mas podemos forçar a classe do bootstrap para ficar bonito.
             'cor': forms.Select(attrs={'class': 'form-select'}), 
+            'dia_vencimento': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Dia (1-31)', 
+                'min': '1', 
+                'max': '31'
+            }),
         }
 
 # --- ADICIONE ESTE FORMULÁRIO NOVO ---

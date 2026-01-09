@@ -47,6 +47,8 @@ class CartaoCredito(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     nome = models.CharField(max_length=50) # Ex: Nubank
     ultimos_digitos = models.CharField(max_length=4) # Ex: 1234
+
+    dia_vencimento = models.IntegerField(default=1, verbose_name="Dia do Vencimento")
     
     cor = models.CharField(max_length=7, choices=CORES_CHOICES, default='#28a745')
 
