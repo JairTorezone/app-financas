@@ -67,7 +67,7 @@
                 <h4 class="mb-0 text-center">{{ titulo }}</h4>
             </div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" {% if form.is_multipart %}enctype="multipart/form-data"{% endif %}>
                     {% csrf_token %}
                     
                     {% for field in form %}

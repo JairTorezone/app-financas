@@ -8,7 +8,8 @@ import json
 
 from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
 from .forms import (
-    CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm, RelatorioFiltroForm, CategoriaForm, TerceiroForm)
+    CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm, 
+    RelatorioFiltroForm, CategoriaForm, TerceiroForm, ImportarFaturaForm)
 
 from django.contrib.auth import login
 
@@ -17,6 +18,9 @@ from django.contrib import messages
 
 from django.shortcuts import get_object_or_404
 from dateutil.relativedelta import relativedelta
+
+import pandas as pd
+from ofxparse import OfxParser
 
 @login_required
 def home(request):
@@ -699,7 +703,6 @@ def excluir_item(request, tipo, id_item):
 
     return redirect('gerenciar_cadastros')
 
-
 @login_required
 def editar_compra(request, compra_id):
     # Busca a compra garantindo que pertence a um cartão do usuário logado (Segurança)
@@ -866,7 +869,6 @@ def copiar_despesas_fixas(request):
 
     return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
 
-
 @login_required
 def copiar_receitas_fixas(request):
     try:
@@ -922,3 +924,103 @@ def copiar_receitas_fixas(request):
         messages.info(request, "Receitas já foram copiadas.")
 
     return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
+
+@login_required
+def importar_fatura(request):
+    if request.method == 'POST':
+        form = ImportarFaturaForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            arquivo = request.FILES['arquivo']
+            cartao = form.cleaned_data['cartao']
+            mes_ref = form.cleaned_data['mes_referencia']
+            ano_ref = form.cleaned_data['ano_referencia']
+            
+            # Data base para forçar o lançamento (Dia 1 do mês selecionado)
+            # Dica: Se quiser lançar no dia do fechamento, teria que ter esse dado no cartão
+            # Por enquanto, vamos lançar tudo no dia 1 ou manter o dia original mas mudar o mês.
+            # Lógica Escolhida: Manter o DIA original, mas forçar MÊS/ANO escolhidos.
+            
+            novos_lancamentos = 0
+            
+            try:
+                # --- LÓGICA PARA CSV ---
+                if arquivo.name.endswith('.csv'):
+                    # Tenta ler CSV (padrão Nubank é separador virgula)
+                    df = pd.read_csv(arquivo)
+                    
+                    # Normaliza colunas (para minúsculo) para facilitar
+                    df.columns = df.columns.str.lower()
+                    
+                    # Verifica se tem as colunas essenciais
+                    # Nubank: date, title, amount
+                    # Inter: Data, Descrição, Valor
+                    
+                    for index, row in df.iterrows():
+                        # Tenta encontrar a data
+                        data_str = row.get('date') or row.get('data')
+                        descricao = row.get('title') or row.get('descrição') or row.get('historico')
+                        valor = row.get('amount') or row.get('valor')
+                        
+                        if data_str and descricao and valor:
+                            # Converte valor (alguns bancos usam virgula decimal)
+                            if isinstance(valor, str):
+                                valor = float(valor.replace('.', '').replace(',', '.'))
+                            
+                            # Pega apenas o DIA da data original (ex: 2025-12-25 -> dia 25)
+                            try:
+                                # Tenta formatos comuns
+                                dia_original = pd.to_datetime(data_str).day
+                            except:
+                                dia_original = 1 # Fallback
+                            
+                            # Cria a data forçada no mês selecionado
+                            try:
+                                nova_data = date(ano_ref, mes_ref, dia_original)
+                            except ValueError:
+                                # Caso o dia seja 31 e o mês novo só tenha 30
+                                nova_data = date(ano_ref, mes_ref, 28)
+
+                            # Cria no banco
+                            CompraCartao.objects.create(
+                                cartao=cartao,
+                                descricao=str(descricao)[:100],
+                                valor=abs(float(valor)), # Garante positivo (alguns csv vêm negativo)
+                                data_compra=nova_data,
+                                is_parcelado=False,
+                                is_terceiro=False
+                            )
+                            novos_lancamentos += 1
+
+                # --- LÓGICA PARA OFX (Mais padronizado) ---
+                elif arquivo.name.endswith('.ofx') or arquivo.name.endswith('.OFX'):
+                    ofx = OfxParser.parse(arquivo)
+                    for transacao in ofx.account.statement.transactions:
+                        # OFX já traz data objeto python
+                        dia_original = transacao.date.day
+                        
+                        try:
+                            nova_data = date(ano_ref, mes_ref, dia_original)
+                        except:
+                            nova_data = date(ano_ref, mes_ref, 28)
+                        
+                        CompraCartao.objects.create(
+                            cartao=cartao,
+                            descricao=transacao.memo[:100],
+                            valor=abs(float(transacao.amount)),
+                            data_compra=nova_data
+                        )
+                        novos_lancamentos += 1
+                
+                messages.success(request, f"{novos_lancamentos} compras importadas para {mes_ref}/{ano_ref}!")
+                return redirect(f"/?mes={mes_ref}&ano={ano_ref}")
+                
+            except Exception as e:
+                messages.error(request, f"Erro ao processar arquivo: {str(e)}")
+                
+    else:
+        form = ImportarFaturaForm(user=request.user)
+
+    return render(request, 'core/form_generico.html', {
+        'form': form,
+        'titulo': 'Importar Fatura (OFX/CSV)'
+    })

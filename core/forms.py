@@ -14,6 +14,7 @@ import copy
 
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from datetime import date 
 
 # --- MIXIN PARA REUTILIZAR A LIMPEZA DE VALOR ---
 class MoneyCleanMixin:
@@ -244,3 +245,32 @@ class TerceiroForm(forms.ModelForm):
             'nome': forms.TextInput(attrs={'class': 'form-control'}),
             'relacionamento': forms.TextInput(attrs={'class': 'form-control'}),
         }
+
+class ImportarFaturaForm(forms.Form):
+    cartao = forms.ModelChoiceField(
+        queryset=CartaoCredito.objects.none(), 
+        label="Cartão de Crédito",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    arquivo = forms.FileField(
+        label="Arquivo (OFX ou CSV)",
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.csv, .ofx'})
+    )
+    mes_referencia = forms.IntegerField(
+        label="Mês da Fatura",
+        initial=date.today().month,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 12})
+    )
+    ano_referencia = forms.IntegerField(
+        label="Ano da Fatura",
+        initial=date.today().year,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 2020, 'max': 2030})
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            # --- A CORREÇÃO ESTÁ AQUI ABAIXO ---
+            # Usamos self.fields['nome_do_campo']
+            self.fields['cartao'].queryset = CartaoCredito.objects.filter(usuario=user)
