@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.db.models import Sum
 from datetime import date
 import json
+import calendar
 
 from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
 from .forms import (
@@ -114,11 +115,13 @@ def home(request):
     lista_despesas.sort(key=lambda x: x['total'], reverse=True)
 
     tem_cartoes = CartaoCredito.objects.filter(usuario=request.user).exists()
+    ultimo_dia = calendar.monthrange(ano_atual, mes_atual)[1]
 
     # --- 4. Contexto Final ---
     contexto = {
         'mes_atual': mes_atual,
         'ano_atual': ano_atual,
+        'ultimo_dia': ultimo_dia,
         
         # Dados Bancários (Reais)
         'receitas': total_receitas,
