@@ -88,7 +88,7 @@
         <div class="card border-success border-2 h-100">
             <div class="card-body">
                 <h6 class="text-success">Receitas</h6>
-                <h3>R$ {{ receitas|floatformat:2 }}</h3>
+                <h3 class="blur-money">R$ {{ receitas|floatformat:2 }}</h3>
             </div>
         </div>
     </div>
@@ -97,7 +97,7 @@
         <div class="card border-danger border-2 h-100">
             <div class="card-body">
                 <h6 class="text-danger">Despesas Totais</h6>
-                <h3>R$ {{ despesas|floatformat:2 }}</h3>
+                <h3 class="blur-money">R$ {{ despesas|floatformat:2 }}</h3>
             </div>
         </div>
     </div>
@@ -106,7 +106,7 @@
         <div class="card {% if saldo >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white h-100">
             <div class="card-body">
                 <h6>Saldo em Conta (Real)</h6>
-                <h3>R$ {{ saldo|floatformat:2 }}</h3>
+                <h3 class="blur-money">R$ {{ saldo|floatformat:2 }}</h3>
             </div>
         </div>
     </div>

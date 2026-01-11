@@ -1,112 +1,156 @@
-{% extends 'core/base.html' %}
-
-{% block content %}
+{% extends 'core/base.html' %} {% block content %}
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-0">
-                <i class="fas fa-list"></i> {{ titulo }}
-            </h4>
-            <p class="text-muted small">
-                Período: {{ data_inicio|date:"d/m/Y" }} até {{ data_fim|date:"d/m/Y" }}
-            </p>
-        </div>
-        <a href="javascript:history.back()" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Voltar
-        </a>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold mb-0"><i class="fas fa-list"></i> {{ titulo }}</h4>
+      <p class="text-muted small">
+        Período: {{ data_inicio|date:"d/m/Y" }} até {{ data_fim|date:"d/m/Y" }}
+      </p>
     </div>
+    <a href="javascript:history.back()" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Voltar
+    </a>
+  </div>
 
-    <div class="card shadow border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Data</th>
-                            {% if is_cartao %}
-                                <th>Cartão</th>
-                            {% endif %}
-                            <th>Descrição</th>
-                            {% if is_cartao %}
-                                <th class="text-center">Parc.</th>
-                            {% endif %}
-                            <th class="text-end">Valor</th>
-                            <th class="text-end" style="width: 100px;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in transacoes %}
-                        <tr>
-                            <td>
-                                {% if is_cartao %}
-                                    {{ item.data_compra|date:"d/m/Y" }}
-                                {% else %}
-                                    {{ item.data|date:"d/m/Y" }}
-                                {% endif %}
-                            </td>
-                            
-                            {% if is_cartao %}
-                                <td>
-                                    <span class="badge text-bg-secondary">{{ item.cartao.nome }}</span>
-                                </td>
-                            {% endif %}
+  <div class="card shadow border-0">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 5%">Status</th>
+              <th>Data</th>
+              <th>Descrição</th>
+              {% if is_cartao %}
+              <th>Cartão</th>
+              {% else %}
+              <th>Categoria</th>
+              {% endif %}
+              <th class="text-end">Valor</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in transacoes %}
+            <tr>
+              <td class="text-center">
+                {% if is_cartao %}
+                <a
+                  href="{% url 'alternar_pagamento' 'compra' item.id %}"
+                  class="text-decoration-none"
+                >
+                  {% if item.pago %}
+                  <i
+                    class="fas fa-check-circle text-success fa-lg"
+                    title="Conferido"
+                  ></i>
+                  {% else %}
+                  <i
+                    class="far fa-circle text-muted fa-lg"
+                    title="Pendente"
+                  ></i>
+                  {% endif %}
+                </a>
+                {% else %}
+                <a
+                  href="{% url 'alternar_pagamento' 'transacao' item.id %}"
+                  class="text-decoration-none"
+                >
+                  {% if item.pago %}
+                  <i
+                    class="fas fa-check-circle text-success fa-lg"
+                    title="Pago em {{ item.data_pagamento|date:'d/m' }}"
+                  ></i>
+                  {% else %}
+                  <i
+                    class="far fa-circle text-muted fa-lg"
+                    title="Marcar como Pago"
+                  ></i>
+                  {% endif %}
+                </a>
+                {% endif %}
+              </td>
 
-                            <td>
-                                {{ item.descricao|default:"-" }}
-                                {% if is_cartao and item.is_terceiro %}
-                                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7em;">
-                                        {{ item.terceiro.nome }}
-                                    </span>
-                                {% endif %}
-                            </td>
+              <td>
+                {% if is_cartao %} {{ item.data_compra|date:"d/m" }} {% else %}
+                {{ item.data|date:"d/m" }} {% endif %}
+              </td>
 
-                            {% if is_cartao %}
-                                <td class="text-center">
-                                    {% if item.is_parcelado %}
-                                        <i class="fas fa-calendar-alt text-warning" title="Parcelado"></i>
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                            {% endif %}
+              <td>
+                <span class="fw-500">{{ item.descricao }}</span>
+                {% if item.observacao %}
+                <i
+                  class="fas fa-info-circle text-muted ms-1 small"
+                  title="{{ item.observacao }}"
+                ></i>
+                {% endif %} {% if item.is_terceiro %}
+                <span
+                  class="badge bg-warning text-dark ms-1"
+                  style="font-size: 0.7em"
+                  >Terceiro</span
+                >
+                {% endif %}
+              </td>
 
-                            <td class="text-end fw-bold">R$ {{ item.valor|floatformat:2 }}</td>
+              <td>
+                {% if is_cartao %}
+                <span
+                  class="badge"
+                  style="background-color: {{ item.cartao.cor }}"
+                  >{{ item.cartao.nome }}</span
+                >
+                {% else %}
+                <span class="badge bg-secondary"
+                  >{{ item.categoria.nome }}</span
+                >
+                {% endif %}
+              </td>
 
-                            <td class="text-end">
-                                {% if is_cartao %}
-                                    <a href="{% url 'editar_compra' item.id %}" class="btn btn-sm btn-link text-primary p-0 me-2" title="Editar">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </a>
-                                    <a href="{% url 'excluir_compra' item.id %}" class="btn btn-sm btn-link text-danger p-0" title="Excluir" onclick="return confirm('Tem certeza que deseja excluir esta compra?');">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </a>
-                                {% else %}
-                                    <a href="{% url 'editar_transacao' item.id %}" class="btn btn-sm btn-link text-primary p-0 me-2" title="Editar">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </a>
-                                    <a href="{% url 'excluir_transacao' item.id %}" class="btn btn-sm btn-link text-danger p-0" title="Excluir" onclick="return confirm('Tem certeza que deseja excluir este lançamento?');">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="{% if is_cartao %}6{% else %}4{% endif %}" class="text-center p-3 text-muted">
-                                Nenhum registro encontrado.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot class="table-light">
-                        <tr>
-                            <td colspan="{% if is_cartao %}4{% else %}2{% endif %}" class="fw-bold text-end">TOTAL</td>
-                            <td class="fw-bold text-end">R$ {{ total|floatformat:2 }}</td>
-                            <td></td> </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
+              <td
+                class="text-end fw-bold {% if item.categoria.tipo == 'R' %}text-success{% else %}text-danger{% endif %}"
+              >
+                R$ {{ item.valor|floatformat:2 }}
+              </td>
+
+              <td class="text-end">
+                {% if is_cartao %}
+                <a
+                  href="{% url 'editar_compra' item.id %}"
+                  class="text-primary me-2"
+                  ><i class="fas fa-pencil-alt"></i
+                ></a>
+                <a
+                  href="{% url 'excluir_compra' item.id %}"
+                  class="text-danger"
+                  onclick="return confirm('Excluir esta compra?')"
+                  ><i class="fas fa-trash"></i
+                ></a>
+                {% else %}
+                <a
+                  href="{% url 'editar_transacao' item.id %}"
+                  class="text-primary me-2"
+                  ><i class="fas fa-pencil-alt"></i
+                ></a>
+                <a
+                  href="{% url 'excluir_transacao' item.id %}"
+                  class="text-danger"
+                  onclick="return confirm('Excluir este lançamento?')"
+                  ><i class="fas fa-trash"></i
+                ></a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">
+                Nenhum lançamento encontrado.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

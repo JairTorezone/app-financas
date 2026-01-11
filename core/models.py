@@ -28,6 +28,8 @@ class Transacao(models.Model):
     data = models.DateField(default=date.today)
     tipo_custo = models.CharField(max_length=1, choices=TIPO_FIXO_VAR, default='V') # Fixo ou Variável
     observacao = models.TextField(blank=True, null=True)
+    pago = models.BooleanField(default=True, verbose_name="Pago?") # Default True facilita para quem lança na hora
+    data_pagamento = models.DateField(null=True, blank=True, verbose_name="Data do Pagamento")
 
     def __str__(self):
         return f"{self.descricao} - {self.valor}"
@@ -82,6 +84,7 @@ class CompraCartao(models.Model):
     # --- MUDANÇA AQUI: Trocamos CharField por ForeignKey ---
     # removemos nome_terceiro antigo e colocamos o link para a tabela nova
     terceiro = models.ForeignKey(Terceiro, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Pessoa")
+    pago = models.BooleanField(default=False, verbose_name="Conferido?")
 
     def __str__(self):
         return f"{self.descricao} - {self.valor}"

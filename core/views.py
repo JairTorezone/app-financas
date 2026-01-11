@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q
 from datetime import date
 import json
 import calendar
@@ -158,7 +158,11 @@ def detalhe_cartao(request):
         'cartao__cor', 
         'cartao__ultimos_digitos',
         'cartao__dia_vencimento' # <--- ADICIONE ISSO AQUI
-    ).annotate(total=Sum('valor')).order_by('-total')
+    ).annotate(
+        total=Sum('valor'),
+        # NOVA LÓGICA: Conta quantos itens NÃO estão pagos (pago=False)
+        pendentes=Count('id', filter=Q(pago=False)) 
+    ).order_by('-total')
 
     # 2. Itens individuais (também filtrado por usuário)
     itens = CompraCartao.objects.filter(
@@ -174,6 +178,27 @@ def detalhe_cartao(request):
         'ano': ano,
         'lista_meses': range(1, 13)
     })
+
+@login_required
+def pagar_fatura_inteira(request, cartao_id, mes, ano):
+    # Busca todas as compras daquele cartão/mês/ano
+    compras = CompraCartao.objects.filter(
+        cartao__usuario=request.user,
+        cartao_id=cartao_id,
+        data_compra__month=mes,
+        data_compra__year=ano
+    )
+    
+    # Lógica de Toggle (Alternar):
+    # Se tiver ALGUMA pendente -> Marca TUDO como pago.
+    # Se estiver TUDO pago -> Marca TUDO como não pago (caso tenha clicado errado).
+    
+    tem_pendencia = compras.filter(pago=False).exists()
+    
+    # Atualiza em massa (Bulk update)
+    compras.update(pago=tem_pendencia)
+    
+    return redirect(f'/cartoes/?mes={mes}&ano={ano}')
 
 @login_required
 def adicionar_transacao(request, tipo):
@@ -1078,3 +1103,35 @@ def editar_item(request, tipo, id):
         'form': form,
         'titulo': dados['titulo']
     })
+
+
+@login_required
+def alternar_pagamento(request, tipo, id_item):
+    from datetime import date # Garante o import
+    
+    # Define qual model usar
+    if tipo == 'transacao':
+        Modelo = Transacao
+    elif tipo == 'compra':
+        Modelo = CompraCartao
+    else:
+        return redirect('home')
+
+    # Busca o item com segurança
+    item = get_object_or_404(Modelo, id=id_item, usuario=request.user if tipo == 'transacao' else None)
+    
+    # Se for compra de cartão, precisamos validar o usuário através da relação do cartão
+    if tipo == 'compra' and item.cartao.usuario != request.user:
+        return redirect('home')
+
+    # Inverte o status (Se tava True vira False, e vice-versa)
+    item.pago = not item.pago
+    
+    # Se virou "Pago", salva a data de hoje. Se "Não pago", limpa a data.
+    if tipo == 'transacao':
+        item.data_pagamento = date.today() if item.pago else None
+    
+    item.save()
+
+    # Redireciona de volta para a mesma página que o usuário estava (usando o HTTP_REFERER)
+    return redirect(request.META.get('HTTP_REFERER', '/'))

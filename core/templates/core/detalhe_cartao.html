@@ -29,15 +29,29 @@
     </button>
   </div>
 
-  {% for fatura in faturas %}
+ {% for fatura in faturas %}
   <div class="col-md-4 mb-3">
     <div
-      class="card bg-light card-filtro"
+      class="card bg-light card-filtro position-relative" 
       style="cursor: pointer; transition: transform 0.2s; border: 2px solid {{ fatura.cartao__cor }};"
       onclick="filtrarTabela('{{ fatura.cartao__id }}')"
       id="card-{{ fatura.cartao__id }}"
       data-cor-original="{{ fatura.cartao__cor }}"
     >
+      
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+        <a href="{% url 'pagar_fatura_inteira' fatura.cartao__id mes ano %}" 
+           class="text-decoration-none"
+           title="{% if fatura.pendentes == 0 %}Marcar como não pago{% else %}Marcar fatura como Paga{% endif %}">
+            
+            {% if fatura.pendentes == 0 %}
+                <i class="fas fa-check-circle text-success fa-lg bg-white rounded-circle"></i>
+            {% else %}
+                <i class="far fa-circle text-muted fa-lg bg-white rounded-circle"></i>
+            {% endif %}
+        </a>
+      </div>
+
       <div class="card-body text-center">
         <h5 class="card-title text-dark">
           {{ fatura.cartao__nome }}
@@ -49,7 +63,14 @@
         <h3 style="color: {{ fatura.cartao__cor }}; font-weight: bold;">
           R$ {{ fatura.total|floatformat:2 }}
         </h3>
-         <small class="d-block" style="opacity: 0.9; margin-top: 10px;">
+        
+        {% if fatura.pendentes == 0 %}
+            <span class="badge bg-success mb-2" style="font-size: 0.7em;">PAGA</span>
+        {% else %}
+            <span class="badge bg-secondary mb-2" style="font-size: 0.7em;">ABERTA</span>
+        {% endif %}
+
+         <small class="d-block" style="opacity: 0.9;">
              <i class="fas fa-calendar-day me-1"></i> 
              Vencimento dia <strong>{{ fatura.cartao__dia_vencimento }}</strong>
         </small>

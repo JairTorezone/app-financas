@@ -16,6 +16,30 @@
       body {
         background-color: #f8f9fa;
       }
+      body.privacy-active .blur-money {
+        color: transparent !important;
+        text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+        user-select: none;
+        transition: all 0.3s ease;
+      }
+
+      body.privacy-active .blur-money:hover {
+        color: inherit !important;
+        text-shadow: none;
+      }
+
+      /* Ícone do Olho */
+      .privacy-toggle-btn {
+        cursor: pointer;
+        color: #6c757d; /* Cinza discreto */
+        transition: color 0.2s;
+        border: none;
+        background: none;
+        padding: 0;
+      }
+      .privacy-toggle-btn:hover {
+        color: #000;
+      }
       .navbar-brand {
         font-weight: bold;
         letter-spacing: 1px;
@@ -38,7 +62,6 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow-sm">
       <div class="container">
-        
         <a class="navbar-brand" href="/">
           <i class="fas fa-wallet text-success"></i> Finanças
         </a>
@@ -56,7 +79,6 @@
         </button>
 
         <div class="collapse navbar-collapse" id="navbarContent">
-          
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
               <!-- <a class="nav-link" href="/">Home</a> -->
@@ -70,54 +92,96 @@
 
           <ul class="navbar-nav">
             {% if user.is_authenticated %}
-              <li class="nav-item dropdown">
-                <a
-                  class="nav-link dropdown-toggle active"
-                  href="#"
-                  id="userDropdown"
-                  role="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  <i class="fas fa-user-circle me-1"></i> {{ user.username }}
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                  
-                  <li>
-                    <a class="dropdown-item" href="{% url 'gerenciar_cadastros' %}">
-                      <i class="fas fa-cog me-2 text-secondary"></i> Configurações
-                    </a>
-                  </li>
-                  
-                  <li><hr class="dropdown-divider" /></li>
-                  
-                  <li>
-                    <form action="{% url 'logout' %}" method="post" class="d-inline">
-                      {% csrf_token %}
-                      <button type="submit" class="dropdown-item text-danger">
-                        <i class="fas fa-sign-out-alt me-2"></i> Sair
-                      </button>
-                    </form>
-                  </li>
-                </ul>
-              </li>
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle active"
+                href="#"
+                id="userDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="fas fa-user-circle me-1"></i> {{ user.username }}
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-end"
+                aria-labelledby="userDropdown"
+              >
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{% url 'gerenciar_cadastros' %}"
+                  >
+                    <i class="fas fa-cog me-2 text-secondary"></i> Configurações
+                  </a>
+                </li>
+
+                <li><hr class="dropdown-divider" /></li>
+
+                <li>
+                  <form
+                    action="{% url 'logout' %}"
+                    method="post"
+                    class="d-inline"
+                  >
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item text-danger">
+                      <i class="fas fa-sign-out-alt me-2"></i> Sair
+                    </button>
+                  </form>
+                </li>
+              </ul>
+            </li>
             {% else %}
-              <li class="nav-item">
-                <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm ms-2">
-                  Entrar
-                </a>
-              </li>
+            <li class="nav-item">
+              <a
+                href="{% url 'login' %}"
+                class="btn btn-outline-light btn-sm ms-2"
+              >
+                Entrar
+              </a>
+            </li>
             {% endif %}
           </ul>
         </div>
       </div>
     </nav>
 
-    <div class="container pb-5">
-      {% block content %} 
-      {% endblock %}
-    </div>
+    <div class="container pb-5">{% block content %} {% endblock %}</div>
+    <script>
+      // Função Global de Privacidade
+      function togglePrivacy() {
+        document.body.classList.toggle("privacy-active");
 
+        const isActive = document.body.classList.contains("privacy-active");
+        localStorage.setItem("privacyMode", isActive);
+
+        updateAllPrivacyIcons(isActive);
+      }
+
+      // Atualiza TODOS os ícones que tiverem a classe .privacy-icon
+      function updateAllPrivacyIcons(isActive) {
+        const icons = document.querySelectorAll(".privacy-icon");
+        icons.forEach((icon) => {
+          // Se ativo (borrado), mostra olho fechado. Se inativo, olho aberto.
+          // OU o contrário, depende do gosto.
+          // Padrão bancos: Borrado = Olho com risco (slash)
+          icon.className = isActive
+            ? "fas fa-eye-slash privacy-icon"
+            : "fas fa-eye privacy-icon";
+        });
+      }
+
+      // Carregar preferência
+      document.addEventListener("DOMContentLoaded", function () {
+        const isPrivacyOn = localStorage.getItem("privacyMode") === "true";
+        if (isPrivacyOn) {
+          document.body.classList.add("privacy-active");
+        }
+        // Atualiza os ícones baseado no estado inicial
+        updateAllPrivacyIcons(isPrivacyOn);
+      });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>
