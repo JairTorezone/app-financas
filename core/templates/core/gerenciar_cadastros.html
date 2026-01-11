@@ -49,6 +49,9 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
+                                <a href="{% url 'editar_item' 'categoria' item.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="fas fa-edit"></i>
+                                </a>
                                 <a href="{% url 'excluir_item' 'categoria' item.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza?');">
                                     <i class="fas fa-trash-alt"></i>
                                 </a>
@@ -70,9 +73,13 @@
                                 <h6 class="mb-0" style="color: {{ item.cor }}">{{ item.nome }}</h6>
                                 <small class="text-muted">Final {{ item.ultimos_digitos }}</small>
                             </div>
-                            <a href="{% url 'excluir_item' 'cartao' item.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza?');">
-                                <i class="fas fa-trash-alt"></i>
-                            </a>
+                            <div> <a href="{% url 'editar_item' 'cartao' item.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'excluir_item' 'cartao' item.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza?');">
+                                    <i class="fas fa-trash-alt"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -101,6 +108,9 @@
                             <td>{{ item.nome }}</td>
                             <td>{{ item.relacionamento|default:"-" }}</td>
                             <td class="text-end">
+                                <a href="{% url 'editar_item' 'terceiro' item.id %}" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="fas fa-edit"></i>
+                                </a>
                                 <a href="{% url 'excluir_item' 'terceiro' item.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza?');">
                                     <i class="fas fa-trash-alt"></i>
                                 </a>

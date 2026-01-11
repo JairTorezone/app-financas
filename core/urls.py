@@ -35,4 +35,6 @@ urlpatterns = [
     path('receitas/copiar-fixas/', views.copiar_receitas_fixas, name='copiar_receitas_fixas'),
 
     path('cartao/importar/', views.importar_fatura, name='importar_fatura'),
+    # Adicione esta linha nas urlpatterns
+    path('editar/<str:tipo>/<int:id>/', views.editar_item, name='editar_item'),
 ]

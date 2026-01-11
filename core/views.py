@@ -1029,3 +1029,52 @@ def importar_fatura(request):
         'form': form,
         'titulo': 'Importar Fatura (OFX/CSV)'
     })
+
+@login_required
+def editar_item(request, tipo, id):
+    # Dicionário para mapear a string da URL para o Modelo e Formulário corretos
+    config = {
+        'categoria': {
+            'model': Categoria,
+            'form': CategoriaForm,
+            'titulo': 'Editar Categoria'
+        },
+        'cartao': {
+            'model': CartaoCredito,
+            'form': CartaoCreditoForm,
+            'titulo': 'Editar Cartão'
+        },
+        'terceiro': {
+            'model': Terceiro,
+            'form': TerceiroForm,
+            'titulo': 'Editar Terceiro'
+        }
+    }
+
+    # Verifica se o tipo existe no dicionário
+    if tipo not in config:
+        messages.error(request, "Tipo de edição inválido.")
+        return redirect('gerenciar_cadastros')
+
+    dados = config[tipo]
+    model_class = dados['model']
+    form_class = dados['form']
+
+    # Busca o objeto garantindo que pertence ao usuário logado (SEGURANÇA)
+    objeto = get_object_or_404(model_class, id=id, usuario=request.user)
+
+    if request.method == 'POST':
+        # Instancia o form com os dados novos (POST) e a instância antiga (instance)
+        form = form_class(request.POST, instance=objeto)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{dados['titulo']} realizado com sucesso!")
+            return redirect('gerenciar_cadastros')
+    else:
+        # GET: Carrega o form preenchido com os dados atuais
+        form = form_class(instance=objeto)
+
+    return render(request, 'core/form_generico.html', {
+        'form': form,
+        'titulo': dados['titulo']
+    })
