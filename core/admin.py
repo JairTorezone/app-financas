@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Categoria, Transacao, CartaoCredito, CompraCartao, Terceiro
+from .models import Categoria, Transacao, CartaoCredito, CompraCartao, Terceiro, MetaMensal
 
 @admin.register(Transacao)
 class TransacaoAdmin(admin.ModelAdmin):
@@ -19,3 +19,8 @@ class TerceiroAdmin(admin.ModelAdmin):
 # Registro simples
 admin.site.register(Categoria)
 admin.site.register(CartaoCredito)
+
+@admin.register(MetaMensal)
+class MetaMensalAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'categoria', 'valor_limite')
+    list_filter = ('usuario',)

@@ -39,4 +39,10 @@ urlpatterns = [
     path('editar/<str:tipo>/<int:id>/', views.editar_item, name='editar_item'),
     path('pagar/<str:tipo>/<int:id_item>/', views.alternar_pagamento, name='alternar_pagamento'),
     path('pagar-fatura/<int:cartao_id>/<int:mes>/<int:ano>/', views.pagar_fatura_inteira, name='pagar_fatura_inteira'),
+    path('metas/', views.definir_metas, name='definir_metas'),
+    path('metas/excluir/<int:id_meta>/', views.excluir_meta, name='excluir_meta'),
+    # Adicione ou verifique se tem essas rotas
+    path('metas/acompanhar/', views.acompanhar_metas, name='acompanhar_metas'),
+    path('metas/definir/', views.definir_metas, name='definir_metas'),
+    path('metas/editar/<int:id_meta>/', views.editar_meta, name='editar_meta'),
 ]

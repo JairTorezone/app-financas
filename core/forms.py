@@ -2,12 +2,13 @@ from django import forms
 from django.db.models import Q
 from .models import CompraCartao, Transacao, Categoria, CartaoCredito
 from dateutil.relativedelta import relativedelta
+from decimal import Decimal
 import copy
 
 # core/forms.py
 from django import forms
 from django.db.models import Q
-from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
+from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro, MetaMensal
 from dateutil.relativedelta import relativedelta
 from decimal import Decimal
 import copy
@@ -278,3 +279,45 @@ class ImportarFaturaForm(forms.Form):
             # --- A CORREÇÃO ESTÁ AQUI ABAIXO ---
             # Usamos self.fields['nome_do_campo']
             self.fields['cartao'].queryset = CartaoCredito.objects.filter(usuario=user)
+
+class MetaMensalForm(forms.ModelForm):
+    valor_limite = forms.CharField(
+        label="Valor Limite (R$)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control money-mask', 
+            'placeholder': 'R$ 0,00'
+        })
+    )
+    
+    class Meta:
+        model = MetaMensal
+        fields = ['tipo', 'periodo', 'categoria', 'valor_limite']
+        widgets = {
+            'tipo': forms.Select(attrs={'class': 'form-select', 'id': 'id_tipo_meta'}),
+            'periodo': forms.Select(attrs={'class': 'form-select'}),
+            'categoria': forms.Select(attrs={'class': 'form-select', 'id': 'id_categoria_meta'}),
+        }
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['categoria'].queryset = Categoria.objects.filter(usuario=user, tipo='D')
+        self.fields['categoria'].required = False
+        
+        # 🆕 ESCONDE O CAMPO CATEGORIA SE NÃO FOR TIPO 'C'
+        # Isso funciona tanto na criação quanto na edição
+        if self.instance.pk:  # Se está editando
+            if self.instance.tipo != 'C':
+                # Esconde o campo visualmente
+                self.fields['categoria'].widget = forms.HiddenInput()
+                self.fields['categoria'].label = ''
+    
+    def clean_valor_limite(self):
+        valor = self.cleaned_data.get('valor_limite')
+        if isinstance(valor, str):
+            from decimal import Decimal
+            valor_limpo = valor.replace('R$', '').replace('.', '').replace(',', '.').strip()
+            try:
+                return Decimal(valor_limpo)
+            except:
+                raise forms.ValidationError("Valor inválido")
+        return valor

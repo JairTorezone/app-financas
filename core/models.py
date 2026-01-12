@@ -88,3 +88,28 @@ class CompraCartao(models.Model):
 
     def __str__(self):
         return f"{self.descricao} - {self.valor}"
+
+class MetaMensal(models.Model):
+    TIPO_CHOICES = (
+        ('C', 'Por Categoria'),
+        ('K', 'Cartão(ões) de Crédito'),
+        ('E', 'Economia (Guardar)'),
+        ('G', 'Orçamento Global (Teto de Gastos)'), # Novo
+    )
+    
+    PERIODO_CHOICES = (
+        ('M', 'Mensal (Mês Atual)'),
+        ('A', 'Anual (Ano Atual)'),
+    )
+
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    tipo = models.CharField(max_length=1, choices=TIPO_CHOICES, default='C')
+    periodo = models.CharField(max_length=1, choices=PERIODO_CHOICES, default='M', verbose_name="Período")
+    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, null=True, blank=True)
+    valor_limite = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor da Meta")
+    
+    class Meta:
+        unique_together = ('usuario', 'tipo', 'categoria', 'periodo')
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.valor_limite}"

@@ -7,10 +7,10 @@ from datetime import date
 import json
 import calendar
 
-from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro
+from .models import CompraCartao, Transacao, Categoria, CartaoCredito, Terceiro, MetaMensal
 from .forms import (
     CompraCartaoForm, TransacaoForm, CartaoCreditoForm, CadastroForm, 
-    RelatorioFiltroForm, CategoriaForm, TerceiroForm, ImportarFaturaForm)
+    RelatorioFiltroForm, CategoriaForm, TerceiroForm, ImportarFaturaForm, MetaMensalForm)
 
 from django.contrib.auth import login
 
@@ -22,6 +22,8 @@ from dateutil.relativedelta import relativedelta
 
 import pandas as pd
 from ofxparse import OfxParser
+
+from django.db import IntegrityError
 
 @login_required
 def home(request):
@@ -474,6 +476,7 @@ def detalhe_terceiro(request, terceiro_id):
 @login_required
 def relatorio_financeiro(request):
     import calendar
+    from .models import MetaMensal # Garanta a importação
     
     hoje = date.today()
     ultimo_dia_mes = calendar.monthrange(hoje.year, hoje.month)[1]
@@ -489,44 +492,111 @@ def relatorio_financeiro(request):
         if form.cleaned_data['data_fim']:
             data_fim = form.cleaned_data['data_fim']
 
-    # --- CONSULTAS BLINDADAS (USUARIO=REQUEST.USER) ---
-
-    # 1. RECEITAS
+    # --- 1. RECEITAS E DESPESAS (CÓDIGO QUE VOCÊ JÁ TINHA) ---
+    # Mantive igual, apenas resumindo para focar na novidade
+    
     receitas = Transacao.objects.filter(
-        usuario=request.user,  # <--- SEGURANÇA: Só do usuário logado
-        categoria__tipo='R',
+        usuario=request.user, 
+        categoria__tipo='R', 
         data__range=[data_inicio, data_fim]
     ).values('categoria__nome', 'categoria__id').annotate(total=Sum('valor')).order_by('-total')
 
     total_receitas = Transacao.objects.filter(
-        usuario=request.user, # <--- SEGURANÇA
-        categoria__tipo='R',
-        data__range=[data_inicio, data_fim]
+        usuario=request.user, categoria__tipo='R', data__range=[data_inicio, data_fim]
     ).aggregate(Sum('valor'))['valor__sum'] or 0
 
-    # 2. DESPESAS DE CONTA
     despesas_conta = Transacao.objects.filter(
-        usuario=request.user, # <--- SEGURANÇA
-        categoria__tipo='D',
-        data__range=[data_inicio, data_fim]
-    ).values('categoria__nome', 'categoria__id').annotate(total=Sum('valor')).order_by('-total')
+        usuario=request.user, categoria__tipo='D', data__range=[data_inicio, data_fim]
+    ).values('categoria__nome', 'categoria__id').annotate(total=Sum('valor'))
 
     total_despesas_conta = Transacao.objects.filter(
-        usuario=request.user, # <--- SEGURANÇA
-        categoria__tipo='D',
-        data__range=[data_inicio, data_fim]
+        usuario=request.user, categoria__tipo='D', data__range=[data_inicio, data_fim]
     ).aggregate(Sum('valor'))['valor__sum'] or 0
 
-    # 3. CARTÃO DE CRÉDITO
-    # CompraCartao -> CartaoCredito -> Usuario
-    gastos_cartao = CompraCartao.objects.filter(
-        cartao__usuario=request.user, # <--- SEGURANÇA
+    # Agrupa gastos de cartão por CATEGORIA (importante para bater com a meta)
+    gastos_cartao_cat = CompraCartao.objects.filter(
+        cartao__usuario=request.user, 
+        data_compra__range=[data_inicio, data_fim]
+    ).values('cartao__nome').annotate(total=Sum('valor')) # Cartão geralmente não tem categoria no seu model atual, então tratamos como um total separado ou se tiver categoria, agrupe aqui.
+    
+    # Nota: No seu model atual, CompraCartao NÃO tem categoria. 
+    # Então vamos considerar o total do cartão como um "gasto" geral para fins de saldo, 
+    # mas as metas funcionarão melhor para Despesas de Conta (Categoria D) por enquanto.
+    
+    total_cartao = CompraCartao.objects.filter(
+        cartao__usuario=request.user,
         data_compra__range=[data_inicio, data_fim]
     ).aggregate(Sum('valor'))['valor__sum'] or 0
 
-    # 4. TOTAIS
-    total_despesas_geral = total_despesas_conta + gastos_cartao
+    total_despesas_geral = total_despesas_conta + total_cartao
     saldo = total_receitas - total_despesas_geral
+
+    # --- 2. LÓGICA DAS METAS (NOVIDADE) 🎯 ---
+    
+    # Pega todas as metas definidas pelo usuário
+    metas_definidas = MetaMensal.objects.filter(usuario=request.user).select_related('categoria')
+    relatorio_metas = []
+    
+    for meta in metas_definidas:
+        gasto_atual = 0
+        is_savings = False # Flag para inverter as cores (Economia: Quanto mais melhor)
+
+        # A) META DE CATEGORIA (Gasto em dinheiro/conta naquela categoria)
+        if meta.tipo == 'C' and meta.categoria:
+            gasto_atual = Transacao.objects.filter(
+                usuario=request.user,
+                categoria=meta.categoria,
+                data__range=[data_inicio, data_fim]
+            ).aggregate(Sum('valor'))['valor__sum'] or 0
+            
+            nome_meta = meta.categoria.nome
+
+        # B) META GLOBAL DE CARTÕES (Soma de TODAS as faturas)
+        elif meta.tipo == 'K':
+            gasto_atual = total_cartao # Variável que já calculamos acima
+            nome_meta = "Total Cartões de Crédito"
+
+        # C) META DE ECONOMIA (Quanto sobrou: Receita - Despesa Total)
+        elif meta.tipo == 'E':
+            gasto_atual = saldo # Variável saldo calculada acima
+            nome_meta = "Meta de Economia (Saldo)"
+            is_savings = True
+
+        # --- CÁLCULO DA PORCENTAGEM ---
+        if meta.valor_limite > 0:
+            porcentagem = (gasto_atual / meta.valor_limite) * 100
+        else:
+            porcentagem = 0
+            
+        # --- DEFINIÇÃO DE CORES ---
+        if is_savings:
+            # Lógica INVERSA para Economia:
+            # < 50% Ruim (Vermelho), < 100% Ok (Amarelo), >= 100% Ótimo (Verde)
+            estourou = False # Não existe "estourar" economia, só não atingir
+            if porcentagem < 50: cor = 'bg-danger'
+            elif porcentagem < 100: cor = 'bg-warning'
+            else: cor = 'bg-success'
+        else:
+            # Lógica Padrão para Gastos:
+            # < 70% Bom (Verde), < 100% Atenção (Amarelo), > 100% Estourou (Vermelho)
+            estourou = porcentagem > 100
+            if porcentagem < 70: cor = 'bg-success'
+            elif porcentagem < 100: cor = 'bg-warning'
+            else: cor = 'bg-danger'
+
+        relatorio_metas.append({
+            'categoria': nome_meta,
+            'limite': meta.valor_limite,
+            'gasto': gasto_atual,
+            'porcentagem': min(porcentagem, 100), # Trava visual em 100%
+            'valor_percentual': porcentagem,      # Valor real para mostrar no texto
+            'estourou': estourou,
+            'cor': cor,
+            'tipo': meta.tipo
+        })
+
+    # Ordena: Quem estourou a meta aparece primeiro
+    relatorio_metas.sort(key=lambda x: x['porcentagem'], reverse=True)
 
     context = {
         'form': form,
@@ -534,11 +604,12 @@ def relatorio_financeiro(request):
         'despesas_conta': despesas_conta,
         'total_receitas': total_receitas,
         'total_despesas_conta': total_despesas_conta,
-        'total_cartao': gastos_cartao,
+        'total_cartao': total_cartao,
         'total_despesas_geral': total_despesas_geral,
         'saldo': saldo,
         'data_inicio': data_inicio,
         'data_fim': data_fim,
+        'relatorio_metas': relatorio_metas, # <--- Enviando para o template
     }
 
     return render(request, 'core/relatorio.html', context)
@@ -1135,3 +1206,280 @@ def alternar_pagamento(request, tipo, id_item):
 
     # Redireciona de volta para a mesma página que o usuário estava (usando o HTTP_REFERER)
     return redirect(request.META.get('HTTP_REFERER', '/'))
+
+#METAS
+@login_required
+def definir_metas(request):
+    from .models import MetaMensal
+    metas = MetaMensal.objects.filter(usuario=request.user).order_by('tipo', 'categoria__nome')
+    
+    if request.method == 'POST':
+        form = MetaMensalForm(request.user, request.POST)
+        if form.is_valid():
+            try:
+                meta = form.save(commit=False)
+                meta.usuario = request.user
+                
+                # Regra: Se não for tipo Categoria, limpa o campo categoria
+                if meta.tipo != 'C':
+                    meta.categoria = None
+                    
+                meta.save()
+                messages.success(request, "Meta definida com sucesso!")
+                return redirect('definir_metas')
+            except Exception as e:
+                messages.error(request, "Erro: Talvez você já tenha uma meta para este item.")
+    else:
+        form = MetaMensalForm(request.user)
+
+    return render(request, 'core/definir_metas.html', {
+        'form': form,
+        'metas': metas
+    })
+
+@login_required
+def excluir_meta(request, id_meta):
+    meta = get_object_or_404(MetaMensal, id=id_meta, usuario=request.user)
+    meta.delete()
+    messages.success(request, "Meta removida.")
+    return redirect('definir_metas')
+
+@login_required
+def acompanhar_metas(request):
+    import calendar
+    from .models import MetaMensal
+    
+    hoje = date.today()
+    mes_atual = hoje.month
+    ano_atual = hoje.year
+    
+    ultimo_dia_mes = calendar.monthrange(ano_atual, mes_atual)[1]
+    inicio_mes = date(ano_atual, mes_atual, 1)
+    fim_mes = date(ano_atual, mes_atual, ultimo_dia_mes)
+    
+    inicio_ano = date(ano_atual, 1, 1)
+    fim_ano = date(ano_atual, 12, 31)
+
+    metas_definidas = MetaMensal.objects.filter(usuario=request.user).select_related('categoria')
+    relatorio_metas = []
+    
+    # Pré-cálculos
+    cartao_mes = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
+    cartao_ano = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
+    
+    rec_mes = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
+    desp_mes = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
+    
+    rec_ano = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
+    desp_ano = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
+
+    saldo_mes = rec_mes - (desp_mes + cartao_mes)
+    saldo_ano = rec_ano - (desp_ano + cartao_ano)
+
+    for meta in metas_definidas:
+        gasto_atual = 0
+        is_savings = False 
+        
+        d_inicio = inicio_mes if meta.periodo == 'M' else inicio_ano
+        d_fim = fim_mes if meta.periodo == 'M' else fim_ano
+        
+        if meta.tipo == 'C' and meta.categoria:
+            gasto_atual = Transacao.objects.filter(
+                usuario=request.user, categoria=meta.categoria, data__range=[d_inicio, d_fim]
+            ).aggregate(Sum('valor'))['valor__sum'] or 0
+            label = f"{meta.categoria.nome} ({meta.get_periodo_display()})"
+
+        elif meta.tipo == 'K':
+            gasto_atual = cartao_mes if meta.periodo == 'M' else cartao_ano
+            label = f"Total Cartões ({meta.get_periodo_display()})"
+
+        elif meta.tipo == 'E':
+            gasto_atual = saldo_mes if meta.periodo == 'M' else saldo_ano
+            label = f"Economia/Saldo ({meta.get_periodo_display()})"
+            is_savings = True  # 🆕 MARCA COMO ECONOMIA
+            
+        elif meta.tipo == 'G':
+            d_conta = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            c_val = cartao_mes if meta.periodo == 'M' else cartao_ano
+            gasto_atual = d_conta + c_val
+            label = f"Orçamento Global ({meta.get_periodo_display()})"
+
+        # Cálculo de porcentagem
+        if meta.valor_limite > 0:
+            porcentagem = (gasto_atual / meta.valor_limite) * 100
+        else:
+            porcentagem = 0
+            
+        # 🔥 LÓGICA DE CORES CORRIGIDA
+        cor_classe = ""
+        cor_style = ""
+        msg_limite = ""
+
+        if is_savings:
+            # ECONOMIA: Verde quando atingir 100%+
+            if porcentagem >= 100:
+                cor_classe = "bg-success"  # Verde
+                msg_limite = "Meta Atingida! 🏆"
+            elif porcentagem >= 50:
+                cor_classe = "bg-warning"  # Amarelo
+            else:
+                cor_classe = "bg-danger"   # Vermelho
+        else:
+            # DESPESAS: Verde quando gastar pouco
+            if porcentagem >= 100:
+                cor_classe = "bg-danger"   # Vermelho
+                msg_limite = "Limite Excedido!"
+            elif porcentagem >= 75:
+                cor_classe = "bg-warning"  # Laranja
+                cor_style = "background-color: #fd7e14 !important;"
+            elif porcentagem >= 50:
+                cor_classe = "bg-warning"  # Amarelo
+            else:
+                cor_classe = "bg-success"  # Verde
+
+        relatorio_metas.append({
+            'id': meta.id,
+            'label': label,
+            'limite': meta.valor_limite,
+            'gasto': gasto_atual,
+            'porcentagem_visual': min(porcentagem, 100),
+            'porcentagem_real': porcentagem,
+            'cor_classe': cor_classe,
+            'cor_style': cor_style,
+            'msg': msg_limite,
+            'is_savings': is_savings  # 🆕 Passa pro template
+        })
+
+    return render(request, 'core/acompanhar_metas.html', {'metas': relatorio_metas})
+
+@login_required
+def definir_metas(request):
+    import calendar
+    from .models import MetaMensal
+    
+    # 1. Processamento do Formulário (POST)
+    if request.method == 'POST':
+        form = MetaMensalForm(request.user, request.POST)
+        if form.is_valid():
+            try:
+                meta = form.save(commit=False)
+                meta.usuario = request.user
+                
+                # Regra de limpeza de categoria
+                if meta.tipo != 'C':
+                    meta.categoria = None
+                
+                meta.save()
+                messages.success(request, "✅ Meta definida com sucesso!")
+                return redirect('definir_metas')
+            except Exception as e:
+                messages.error(request, "⚠️ Erro: Talvez você já tenha uma meta desse tipo/período.")
+        else:
+            messages.error(request, "Erro no formulário. Verifique os campos.")
+    else:
+        form = MetaMensalForm(request.user)
+
+    # 2. Cálculos para o Dashboard (Sempre roda, GET ou POST)
+    metas_banco = MetaMensal.objects.filter(usuario=request.user).order_by('periodo', 'tipo')
+    
+    hoje = date.today()
+    mes_atual = hoje.month
+    ano_atual = hoje.year
+    
+    # Datas
+    ultimo_dia_mes = calendar.monthrange(ano_atual, mes_atual)[1]
+    inicio_mes = date(ano_atual, mes_atual, 1)
+    fim_mes = date(ano_atual, mes_atual, ultimo_dia_mes)
+    inicio_ano = date(ano_atual, 1, 1)
+    fim_ano = date(ano_atual, 12, 31)
+    
+    # Agregações Globais (Para evitar muitas consultas)
+    cartao_mes = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
+    cartao_ano = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
+    
+    rec_mes = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
+    desp_mes = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
+    rec_ano = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
+    desp_ano = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
+    
+    saldo_mes = rec_mes - (desp_mes + cartao_mes)
+    saldo_ano = rec_ano - (desp_ano + cartao_ano)
+    
+    metas_com_progresso = []
+    
+    for meta in metas_banco:
+        d_inicio = inicio_mes if meta.periodo == 'M' else inicio_ano
+        d_fim = fim_mes if meta.periodo == 'M' else fim_ano
+        
+        gasto_atual = 0
+        is_savings = False
+        
+        if meta.tipo == 'C' and meta.categoria:
+            gasto_atual = Transacao.objects.filter(usuario=request.user, categoria=meta.categoria, data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+        elif meta.tipo == 'K':
+            gasto_atual = cartao_mes if meta.periodo == 'M' else cartao_ano
+        elif meta.tipo == 'E':
+            gasto_atual = saldo_mes if meta.periodo == 'M' else saldo_ano
+            is_savings = True
+        elif meta.tipo == 'G':
+            d_conta = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            c_val = cartao_mes if meta.periodo == 'M' else cartao_ano
+            gasto_atual = d_conta + c_val
+
+        # Porcentagem
+        porcentagem = (gasto_atual / meta.valor_limite * 100) if meta.valor_limite > 0 else 0
+        
+        # Cores
+        cor_classe = ""
+        if is_savings:
+            if porcentagem >= 100: cor_classe = 'bg-success'
+            elif porcentagem >= 50: cor_classe = 'bg-warning'
+            else: cor_classe = 'bg-danger'
+        else:
+            if porcentagem >= 100: cor_classe = 'bg-danger'
+            elif porcentagem >= 75: cor_classe = 'bg-warning' # Laranja visual via CSS depois se quiser
+            elif porcentagem >= 50: cor_classe = 'bg-warning'
+            else: cor_classe = 'bg-success'
+
+        # Atribui ao objeto temporário
+        meta.gasto_atual = gasto_atual
+        meta.porcentagem = porcentagem
+        meta.cor_classe = cor_classe
+        meta.is_savings = is_savings
+        
+        metas_com_progresso.append(meta)
+
+    return render(request, 'core/definir_metas.html', {
+        'form': form, 
+        'metas': metas_com_progresso # Passa a lista processada!
+    })
+
+@login_required
+def editar_meta(request, id_meta):
+    # Busca a meta ou retorna erro 404, garantindo que pertence ao usuário
+    meta = get_object_or_404(MetaMensal, id=id_meta, usuario=request.user)
+    
+    if request.method == 'POST':
+        form = MetaMensalForm(request.user, request.POST, instance=meta)
+        if form.is_valid():
+            try:
+                m = form.save(commit=False)
+                
+                # Regra de negócio: Se mudou para algo que não é Categoria, limpa o campo
+                if m.tipo != 'C':
+                    m.categoria = None
+                    
+                m.save()
+                messages.success(request, "Meta atualizada com sucesso!")
+                return redirect('definir_metas')
+            except Exception as e:
+                messages.error(request, "Erro ao atualizar meta.")
+    else:
+        # Carrega o formulário com os dados existentes
+        form = MetaMensalForm(request.user, instance=meta)
+    
+    # Renderiza o template específico de edição que você criou
+    return render(request, 'core/editar_meta.html', { # Atenção ao nome do arquivo
+        'form': form,
+        'meta': meta # Passar o objeto meta pode ser útil para exibir o título
+    })

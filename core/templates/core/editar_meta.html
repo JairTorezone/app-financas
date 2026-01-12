@@ -1,0 +1,99 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Editar Meta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo de Meta</label>
+                            {{ form.tipo }}
+                            {% if form.tipo.errors %}
+                                <div class="text-danger small">{{ form.tipo.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Período</label>
+                            {{ form.periodo }}
+                            {% if form.periodo.errors %}
+                                <div class="text-danger small">{{ form.periodo.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Só mostra categoria se o campo NÃO estiver escondido -->
+                        {% if form.categoria.field.widget.input_type != 'hidden' %}
+                        <div class="mb-3" id="div_categoria">
+                            <label class="form-label fw-bold">Categoria</label>
+                            <div class="input-group">
+                                {{ form.categoria }}
+                                <!-- <button type="button" class="btn btn-outline-primary" 
+                                        onclick="alert('Função de adicionar categoria em desenvolvimento')">
+                                    <i class="fas fa-plus"></i>
+                                </button> -->
+                            </div>
+                            {% if form.categoria.errors %}
+                                <div class="text-danger small">{{ form.categoria.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                            {{ form.categoria }}
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Valor Limite (R$)</label>
+                            {{ form.valor_limite }}
+                            {% if form.valor_limite.errors %}
+                                <div class="text-danger small">{{ form.valor_limite.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-2"></i>Salvar Alterações
+                            </button>
+                            <a href="{% url 'definir_metas' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Aplica a máscara de dinheiro no campo valor_limite
+document.addEventListener('DOMContentLoaded', function() {
+    const valorInput = document.querySelector('.money-mask');
+    if (valorInput) {
+        valorInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            value = (value / 100).toFixed(2);
+            value = value.replace('.', ',');
+            value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            e.target.value = 'R$ ' + value;
+        });
+    }
+});
+</script>
+{% endblock %}
