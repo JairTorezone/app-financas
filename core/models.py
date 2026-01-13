@@ -28,7 +28,7 @@ class Transacao(models.Model):
     data = models.DateField(default=date.today)
     tipo_custo = models.CharField(max_length=1, choices=TIPO_FIXO_VAR, default='V') # Fixo ou Variável
     observacao = models.TextField(blank=True, null=True)
-    pago = models.BooleanField(default=True, verbose_name="Pago?") # Default True facilita para quem lança na hora
+    pago = models.BooleanField(default=False, verbose_name="Pago?") # Default True facilita para quem lança na hora
     data_pagamento = models.DateField(null=True, blank=True, verbose_name="Data do Pagamento")
 
     def __str__(self):

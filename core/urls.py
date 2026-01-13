@@ -45,4 +45,5 @@ urlpatterns = [
     path('metas/acompanhar/', views.acompanhar_metas, name='acompanhar_metas'),
     path('metas/definir/', views.definir_metas, name='definir_metas'),
     path('metas/editar/<int:id_meta>/', views.editar_meta, name='editar_meta'),
+    path('pagar-categoria/<int:categoria_id>/<int:mes>/<int:ano>/', views.pagar_categoria_inteira, name='pagar_categoria_inteira'),
 ]

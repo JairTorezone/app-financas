@@ -101,7 +101,10 @@ def home(request):
         categoria__tipo='D', 
         **filtro_data
     ).values('categoria__nome', 'categoria__id')\
-     .annotate(total=Sum('valor'))
+     .annotate(
+         total=Sum('valor'),
+         pendentes=Count('id', filter=Q(pago=False)) # <--- NOVO: Conta quantos não foram pagos
+     )
     
     lista_despesas = list(despesas_query)
 
@@ -1175,7 +1178,6 @@ def editar_item(request, tipo, id):
         'titulo': dados['titulo']
     })
 
-
 @login_required
 def alternar_pagamento(request, tipo, id_item):
     from datetime import date # Garante o import
@@ -1483,3 +1485,36 @@ def editar_meta(request, id_meta):
         'form': form,
         'meta': meta # Passar o objeto meta pode ser útil para exibir o título
     })
+
+@login_required
+def pagar_categoria_inteira(request, categoria_id, mes, ano):
+    """
+    Marca TODAS as transações de uma categoria específica no mês/ano como PAGAS.
+    Se todas já estiverem pagas, marca como NÃO PAGAS (toggle).
+    """
+    from datetime import date # Garantir import
+    
+    # Busca as transações dessa categoria, usuário e data
+    transacoes = Transacao.objects.filter(
+        usuario=request.user,
+        categoria_id=categoria_id,
+        data__month=mes,
+        data__year=ano
+    )
+    
+    if not transacoes.exists():
+        return redirect(f'/?mes={mes}&ano={ano}')
+
+    # Verifica se existe ALGUMA pendente (pago=False)
+    tem_pendencia = transacoes.filter(pago=False).exists()
+    
+    # Se tem pendência, vamos marcar TUDO como pago.
+    # Se não tem pendência (tudo verde), vamos marcar tudo como NÃO pago.
+    novo_status = tem_pendencia 
+    nova_data = date.today() if novo_status else None
+    
+    # Atualização em massa (Bulk Update)
+    transacoes.update(pago=novo_status, data_pagamento=nova_data)
+    
+    # Retorna para a home no mesmo mês
+    return redirect(f'/?mes={mes}&ano={ano}')
