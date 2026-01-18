@@ -1,266 +1,211 @@
-{% extends 'core/base.html' %}
+{% extends 'core/base.html' %} 
+{% load l10n %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="fw-bold text-dark">
-                    <i class="fas fa-bullseye text-primary me-2"></i>Gerenciar Metas
-                </h4>
-                <button class="btn btn-primary" type="button" data-bs-toggle="collapse" 
-                        data-bs-target="#progressoMetas" aria-expanded="false">
-                    <i class="fas fa-chart-bar me-2"></i>Ver Progresso
-                </button>
-            </div>
+  
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold text-dark">
+      <i class="fas fa-bullseye text-primary me-2"></i>Gerenciar Metas
+    </h4>
+    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#painelMetas" aria-expanded="false">
+      <i class="fas fa-chart-pie me-2"></i>Ver Progresso
+    </button>
+  </div>
 
-            <div class="collapse show mb-4" id="progressoMetas">
-                <div class="card shadow-sm border-primary">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Acompanhamento de Metas</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            {% for meta in metas %}
-                            {% if meta.id %}
-                            <div class="col-md-6 mb-3">
-                                <div class="card border-0 bg-light h-100 shadow-sm">
-                                    <div class="card-body">
-                                        
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div class="d-flex align-items-center">
-                                                {% if meta.tipo == 'C' %}
-                                                    <i class="fas fa-tags text-secondary fa-lg me-2"></i>
-                                                    <h6 class="fw-bold mb-0 text-secondary">{{ meta.categoria.nome }}</h6>
-                                                
-                                                {% elif meta.tipo == 'K' %}
-                                                    <i class="fas fa-credit-card text-warning fa-lg me-2"></i>
-                                                    <h6 class="fw-bold mb-0 text-warning">Total Cartões</h6>
-                                                
-                                                {% elif meta.tipo == 'E' %}
-                                                    <i class="fas fa-piggy-bank text-success fa-lg me-2"></i>
-                                                    <h6 class="fw-bold mb-0 text-success">Economia</h6>
-                                                
-                                                {% elif meta.tipo == 'G' %}
-                                                    <i class="fas fa-globe text-danger fa-lg me-2"></i>
-                                                    <h6 class="fw-bold mb-0 text-danger">Orçamento Global</h6>
-                                                {% endif %}
-                                            </div>
-
-                                            <div>
-                                                {% if meta.periodo == 'A' %}
-                                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10">ANUAL</span>
-                                                {% else %}
-                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10">MENSAL</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="badge bg-white text-dark border shadow-sm">
-                                                {{ meta.porcentagem|default:0|floatformat:0 }}%
-                                            </span>
-                                            <div class="small text-end">
-                                                <span class="fw-bold text-dark">R$ {{ meta.gasto_atual|default:0|floatformat:2 }}</span>
-                                                <span class="text-muted"> / R$ {{ meta.valor_limite|floatformat:2 }}</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="progress" style="height: 12px;">
-                                            {% if meta.is_savings %}
-                                                <div class="progress-bar {% if meta.porcentagem >= 100 %}bg-success{% elif meta.porcentagem >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
-                                                     role="progressbar" 
-                                                     style="width: {% if meta.porcentagem > 100 %}100{% else %}{{ meta.porcentagem|stringformat:'d' }}{% endif %}%">
-                                                </div>
-                                            {% else %}
-                                                <div class="progress-bar {{ meta.cor_classe }}" 
-                                                     role="progressbar" 
-                                                     style="width: {% if meta.porcentagem > 100 %}100{% else %}{{ meta.porcentagem|stringformat:'d' }}{% endif %}%">
-                                                </div>
-                                            {% endif %}
-                                        </div>
-
-                                        <div class="mt-2 text-center" style="min-height: 24px;">
-                                            {% if meta.is_savings %}
-                                                {% if meta.porcentagem >= 100 %}
-                                                    <small class="text-success fw-bold">
-                                                        <i class="fas fa-trophy fa-lg me-1"></i> Parabéns! Meta atingida!
-                                                    </small>
-                                                {% else %}
-                                                    <small class="text-muted fst-italic">Continue guardando...</small>
-                                                {% endif %}
-                                            {% else %}
-                                                {% if meta.porcentagem > 100 %}
-                                                    <small class="text-danger fw-bold shake-animation">
-                                                        <i class="fas fa-exclamation-triangle me-1"></i> Excedeu o limite!
-                                                    </small>
-                                                {% elif meta.porcentagem >= 90 %}
-                                                    <small class="text-warning fw-bold">
-                                                        <i class="fas fa-exclamation-circle me-1"></i> Cuidado, quase lá!
-                                                    </small>
-                                                {% endif %}
-                                            {% endif %}
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-                            {% empty %}
-                            <div class="col-12 text-center py-3">
-                                <p class="text-muted">Defina metas abaixo para acompanhar seu progresso.</p>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom-0">
-                    <h5 class="mb-0 text-primary">
-                        <i class="fas fa-plus-circle me-2"></i>Definir Nova Meta
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if form.non_field_errors %}
-                    <div class="alert alert-danger">
-                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-                    </div>
-                    {% endif %}
-                    
-                    <form method="POST">
-                        {% csrf_token %}
-                        <div class="row g-3 align-items-end">
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Tipo de Meta</label>
-                                {{ form.tipo }}
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label fw-bold">Período</label>
-                                {{ form.periodo }}
-                            </div>
-                            <div class="col-md-3" id="div_categoria">
-                                <label class="form-label fw-bold">Categoria</label>
-                                {{ form.categoria }}
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Valor Limite (R$)</label>
-                                {{ form.valor_limite }}
-                                {% if form.valor_limite.errors %}
-                                <div class="text-danger small">{{ form.valor_limite.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-1">
-                                <button type="submit" class="btn btn-success w-100" title="Adicionar Meta">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <h6 class="text-muted mb-3">Metas Definidas</h6>
-            <div class="list-group shadow-sm">
-                {% for meta in metas %}
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    
-                    <div class="d-flex align-items-center flex-grow-1">
-                        {% if meta.periodo == 'A' %}
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 me-3">Anual</span>
-                        {% else %}
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 me-3">Mensal</span>
-                        {% endif %}
-                        
-                        {% if meta.tipo == 'C' %}
-                            <i class="fas fa-tags text-secondary me-2"></i>
-                            <span class="fw-bold text-secondary">{{ meta.categoria.nome }}</span>
-                        
-                        {% elif meta.tipo == 'K' %}
-                            <i class="fas fa-credit-card text-warning me-2"></i>
-                            <span class="fw-bold text-warning">Total Faturas</span>
-                        
-                        {% elif meta.tipo == 'E' %}
-                            <i class="fas fa-piggy-bank text-success me-2"></i>
-                            <span class="fw-bold text-success">Guardar Saldo</span>
-                        
-                        {% elif meta.tipo == 'G' %}
-                            <i class="fas fa-globe text-danger me-2"></i>
-                            <span class="fw-bold text-danger">Teto de Gastos</span>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="fw-bold fs-5 text-dark">R$ {{ meta.valor_limite|floatformat:2 }}</span>
-                        <a href="{% url 'editar_meta' meta.id %}" class="btn btn-sm btn-outline-secondary border-0" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <a href="{% url 'excluir_meta' meta.id %}" class="btn btn-sm btn-outline-danger border-0" 
-                           onclick="return confirm('Tem certeza que deseja remover esta meta?');" title="Excluir">
-                            <i class="fas fa-trash-alt"></i>
-                        </a>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="list-group-item text-center text-muted py-4">
-                    <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                    Nenhuma meta definida ainda.
-                </div>
-                {% endfor %}
-            </div>
-            
-            <div class="text-center mt-4">
-                <a href="{% url 'home' %}" class="btn btn-link text-muted">
-                    <i class="fas fa-arrow-left me-1"></i>Voltar para Home
-                </a>
-            </div>
-
+  <div class="collapse mb-4" id="painelMetas">
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <div class="card border-success border-top-0 border-end-0 border-bottom-0 border-3 shadow-sm h-100">
+          <div class="card-header bg-white fw-bold text-success">
+            <i class="fas fa-piggy-bank me-2"></i>Metas de Poupança
+          </div>
+          <div class="card-body bg-light">
+            {% for grupo in poupanca_display %}
+                <h6 class="{{ grupo.cor_titulo }} fw-bold text-uppercase small mt-3 border-bottom pb-1">
+                    {{ grupo.titulo }}
+                </h6>
+                {% for meta in grupo.lista %} 
+                    {% include "core/includes/card_meta_simples.html" with meta=meta %} 
+                {% endfor %} 
+            {% empty %}
+                <p class="text-muted small py-3">Nenhuma meta de economia definida.</p>
+            {% endfor %}
+          </div>
         </div>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <div class="card border-danger border-top-0 border-end-0 border-bottom-0 border-3 shadow-sm h-100">
+          <div class="card-header bg-white fw-bold text-danger">
+            <i class="fas fa-wallet me-2"></i>Limites de Gastos
+          </div>
+          <div class="card-body bg-light">
+            {% for grupo in gastos_display %}
+                <h6 class="{{ grupo.cor_titulo }} fw-bold text-uppercase small mt-3 border-bottom pb-1">
+                    {{ grupo.titulo }}
+                </h6>
+                {% for meta in grupo.lista %} 
+                    {% include "core/includes/card_meta_simples.html" with meta=meta %} 
+                {% endfor %} 
+            {% empty %}
+                <p class="text-muted small py-3">Nenhum limite de gasto definido.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3">
+      <h5 class="mb-0 text-dark fw-bold">
+        <i class="fas fa-plus-circle text-primary me-2"></i>
+        {% if form.instance.pk %}Editar Meta{% else %}Definir Nova Meta{% endif %}
+      </h5>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        {% csrf_token %}
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">1. Período da Meta</label>
+            {{ form.periodo }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">2. Tipo de Meta</label>
+            {{ form.tipo }}
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-12" id="div-nome-meta" style="display: none;">
+            <label class="form-label text-primary">Nome da Meta (Ex: Viagem Férias)</label>
+            {{ form.descricao }}
+          </div>
+
+          <div class="col-md-12" id="div-datas-personalizadas" style="display: none;">
+            <div class="p-3 bg-light border rounded">
+              <small class="text-primary fw-bold d-block mb-2">Selecione o intervalo exato:</small>
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="small">Início</label>
+                  {{ form.data_inicio }}
+                </div>
+                <div class="col-md-6">
+                  <label class="small">Fim</label>
+                  {{ form.data_fim }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 align-items-end">
+          <div class="col-md-6" id="div_categoria" style="display: none;">
+            <label class="form-label fw-bold">Categoria</label>
+            {{ form.categoria }}
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-bold">Valor Alvo/Limite</label>
+            {{ form.valor_limite }}
+          </div>
+
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-success w-100 py-2">
+              <i class="fas fa-save me-1"></i> Salvar
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="mt-5">
+    <h6 class="text-muted mb-3">Lista Rápida (Edição/Exclusão)</h6>
+    <div class="list-group shadow-sm">
+      {% for meta in metas %}
+      <div class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          {% if meta.periodo == 'M' %}
+            <span class="badge bg-info text-dark me-2">Mensal</span>
+          {% elif meta.periodo == 'T' %}
+            <span class="badge bg-warning text-dark me-2">Trimestral</span>
+          {% elif meta.periodo == 'S' %}
+            <span class="badge bg-primary me-2">Semestral</span>
+          {% elif meta.periodo == 'A' %}
+            <span class="badge bg-success me-2">Anual</span>
+          {% elif meta.periodo == 'P' %}
+            <span class="badge bg-dark me-2">Personalizado</span>
+          {% endif %}
+
+          <strong>{{ meta.temp_label }}</strong>
+          <small class="text-muted d-block ms-1" style="font-size: 0.75rem;">{{ meta.temp_datas }}</small>
+        </div>
+        <div>
+          <span class="fw-bold me-3 text-secondary">R$ {{ meta.valor_limite|floatformat:2 }}</span>
+          <a href="{% url 'editar_meta' meta.id %}" class="btn btn-sm btn-light border text-primary" title="Editar">
+            <i class="fas fa-pencil-alt"></i>
+          </a>
+          <a href="{% url 'excluir_meta' meta.id %}" class="btn btn-sm btn-light border text-danger" onclick="return confirm('Excluir?');" title="Excluir">
+            <i class="fas fa-trash"></i>
+          </a>
+        </div>
+      </div>
+      {% empty %}
+        <div class="list-group-item text-muted text-center py-3">Nenhuma meta cadastrada.</div>
+      {% endfor %}
+    </div>
+  </div>
 </div>
 
 <script>
-const selectTipo = document.getElementById('id_tipo_meta');
-const divCategoria = document.getElementById('div_categoria');
-const selectTipoAlternativo = document.querySelector('[name="tipo"]'); 
+document.addEventListener("DOMContentLoaded", function () {
+    const elPeriodo = document.querySelector('[name="periodo"]');
+    const elTipo = document.querySelector('[name="tipo"]');
+    
+    const divNome = document.getElementById("div-nome-meta");
+    const divDatas = document.getElementById("div-datas-personalizadas");
+    const divCategoria = document.getElementById("div_categoria");
 
-function toggleCategoria() {
-    let el = selectTipo || selectTipoAlternativo;
-    if (!el) return;
-    if (el.value === 'C') {
-        divCategoria.style.display = 'block';
-    } else {
-        divCategoria.style.display = 'none';
+    function atualizarCampos() {
+      if (!elPeriodo || !elTipo) return;
+
+      if (elPeriodo.value === "P") {
+        divNome.style.display = "block";
+        divDatas.style.display = "block";
+      } else {
+        divNome.style.display = "none";
+        divDatas.style.display = "none";
+      }
+
+      if (elTipo.value === "C") {
+        divCategoria.style.display = "block";
+      } else {
+        divCategoria.style.display = "none";
+      }
     }
-}
 
-if (selectTipo || selectTipoAlternativo) {
-    let el = selectTipo || selectTipoAlternativo;
-    el.addEventListener('change', toggleCategoria);
-    toggleCategoria(); 
-}
+    if (elPeriodo) elPeriodo.addEventListener("change", atualizarCampos);
+    if (elTipo) elTipo.addEventListener("change", atualizarCampos);
+
+    atualizarCampos();
+
+    // Máscara de Dinheiro
+    const inputValor = document.getElementById('id_valor_limite'); 
+    
+    if (inputValor) {
+        inputValor.addEventListener('input', function(e) {
+            let value = e.target.value;
+            value = value.replace(/\D/g, "");
+            value = (value / 100).toFixed(2) + "";
+            value = value.replace(".", ",");
+            value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+            e.target.value = "R$ " + value;
+        });
+    }
+});
 </script>
-
-<style>
-    @keyframes shake {
-        0% { transform: translate(1px, 1px) rotate(0deg); }
-        10% { transform: translate(-1px, -2px) rotate(-1deg); }
-        20% { transform: translate(-3px, 0px) rotate(1deg); }
-        30% { transform: translate(3px, 2px) rotate(0deg); }
-        40% { transform: translate(1px, -1px) rotate(1deg); }
-        50% { transform: translate(-1px, 2px) rotate(-1deg); }
-        60% { transform: translate(-3px, 1px) rotate(0deg); }
-        70% { transform: translate(3px, 1px) rotate(-1deg); }
-        80% { transform: translate(-1px, -1px) rotate(1deg); }
-        90% { transform: translate(1px, 2px) rotate(0deg); }
-        100% { transform: translate(1px, -2px) rotate(-1deg); }
-    }
-    .shake-animation {
-        display: inline-block;
-        animation: shake 0.5s;
-        animation-iteration-count: 1; 
-    }
-</style>
 {% endblock %}

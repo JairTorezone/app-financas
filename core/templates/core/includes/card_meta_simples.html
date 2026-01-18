@@ -1,0 +1,33 @@
+{% load l10n %} 
+
+<div class="card border-0 shadow-sm mb-2">
+    <div class="card-body p-2">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold small text-dark">{{ meta.temp_label }}</span>
+            <span class="badge bg-white text-dark border" style="font-size: 0.7rem;">
+                {{ meta.temp_perc_real|floatformat:0 }}%
+            </span>
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center small mb-1">
+            <span class="text-muted" style="font-size: 0.7rem;">{{ meta.temp_datas }}</span>
+            <span class="fw-bold" style="font-size: 0.7rem;">
+                R$ {{ meta.temp_gasto|floatformat:2 }} / R$ {{ meta.valor_limite|floatformat:2 }}
+            </span>
+        </div>
+
+        <div class="progress" style="height: 6px;">
+            <div class="progress-bar {{ meta.temp_cor }}" role="progressbar" 
+                 style="width: {{ meta.temp_perc_visual|stringformat:'d' }}%">
+            </div>
+        </div>
+        
+        {% if meta.temp_msg %}
+            <div class="text-center mt-1">
+                <span class="badge {% if 'Excedeu' in meta.temp_msg %}bg-danger{% else %}bg-success{% endif %}" style="font-size: 0.6rem;">
+                    {{ meta.temp_msg }}
+                </span>
+            </div>
+        {% endif %}
+    </div>
+</div>

@@ -1,79 +1,79 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
+        <div class="col-md-8">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0 fw-bold">
                         <i class="fas fa-edit me-2"></i>Editar Meta
                     </h5>
                 </div>
-                <div class="card-body">
-                    {% if messages %}
-                        {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                        {% endfor %}
-                    {% endif %}
-
+                <div class="card-body p-4">
                     <form method="POST">
                         {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Tipo de Meta</label>
-                            {{ form.tipo }}
-                            {% if form.tipo.errors %}
-                                <div class="text-danger small">{{ form.tipo.errors.0 }}</div>
-                            {% endif %}
-                        </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Período</label>
-                            {{ form.periodo }}
-                            {% if form.periodo.errors %}
-                                <div class="text-danger small">{{ form.periodo.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Só mostra categoria se o campo NÃO estiver escondido -->
-                        {% if form.categoria.field.widget.input_type != 'hidden' %}
-                        <div class="mb-3" id="div_categoria">
-                            <label class="form-label fw-bold">Categoria</label>
-                            <div class="input-group">
-                                {{ form.categoria }}
-                                <!-- <button type="button" class="btn btn-outline-primary" 
-                                        onclick="alert('Função de adicionar categoria em desenvolvimento')">
-                                    <i class="fas fa-plus"></i>
-                                </button> -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">1. Período da Meta</label>
+                                {{ form.periodo }}
                             </div>
-                            {% if form.categoria.errors %}
-                                <div class="text-danger small">{{ form.categoria.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        {% else %}
-                            {{ form.categoria }}
-                        {% endif %}
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Valor Limite (R$)</label>
-                            {{ form.valor_limite }}
-                            {% if form.valor_limite.errors %}
-                                <div class="text-danger small">{{ form.valor_limite.errors.0 }}</div>
-                            {% endif %}
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">2. Tipo de Meta</label>
+                                {{ form.tipo }}
+                            </div>
                         </div>
 
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-save me-2"></i>Salvar Alterações
-                            </button>
-                            <a href="{% url 'definir_metas' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-2"></i>Cancelar
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12" id="div-nome-meta" style="display: none;">
+                                <label class="form-label text-primary">Nome da Meta (Ex: Viagem Férias)</label>
+                                {{ form.descricao }}
+                            </div>
+
+                            <div class="col-md-12" id="div-datas-personalizadas" style="display: none;">
+                                <div class="p-3 bg-light border rounded">
+                                    <small class="text-primary fw-bold d-block mb-2">
+                                        <i class="fas fa-calendar-alt me-1"></i> Intervalo Personalizado:
+                                    </small>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="small text-muted">Data Início</label>
+                                            {{ form.data_inicio }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="small text-muted">Data Fim</label>
+                                            {{ form.data_fim }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-12" id="div_categoria" style="display: none;">
+                                <label class="form-label fw-bold">Selecione a Categoria</label>
+                                {{ form.categoria }}
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Valor Alvo/Limite</label>
+                                {{ form.valor_limite }}
+                                {% if form.valor_limite.errors %}
+                                    <div class="text-danger small mt-1">{{ form.valor_limite.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'definir_metas' %}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i> Cancelar
                             </a>
+                            <button type="submit" class="btn btn-success px-4">
+                                <i class="fas fa-save me-1"></i> Salvar Alterações
+                            </button>
                         </div>
+
                     </form>
                 </div>
             </div>
@@ -82,16 +82,62 @@
 </div>
 
 <script>
-// Aplica a máscara de dinheiro no campo valor_limite
-document.addEventListener('DOMContentLoaded', function() {
-    const valorInput = document.querySelector('.money-mask');
-    if (valorInput) {
-        valorInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            value = (value / 100).toFixed(2);
-            value = value.replace('.', ',');
-            value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            e.target.value = 'R$ ' + value;
+document.addEventListener("DOMContentLoaded", function () {
+    const elPeriodo = document.querySelector('[name="periodo"]');
+    const elTipo = document.querySelector('[name="tipo"]');
+    
+    // Divs que serão mostradas/ocultadas
+    const divNome = document.getElementById("div-nome-meta");
+    const divDatas = document.getElementById("div-datas-personalizadas");
+    const divCategoria = document.getElementById("div_categoria");
+
+    // --- Função para Mostrar/Esconder Campos ---
+    function atualizarCampos() {
+      if (!elPeriodo || !elTipo) return;
+
+      // 1. Lógica do Período (P = Personalizado)
+      if (elPeriodo.value === "P") {
+        divNome.style.display = "block";
+        divDatas.style.display = "block";
+      } else {
+        divNome.style.display = "none";
+        divDatas.style.display = "none";
+      }
+
+      // 2. Lógica do Tipo (C = Por Categoria)
+      // Aqui estava o erro: antes não tinha esse controle na edição, por isso aparecia sempre
+      if (elTipo.value === "C") {
+        divCategoria.style.display = "block";
+      } else {
+        divCategoria.style.display = "none";
+      }
+    }
+
+    // Escuta mudanças caso o usuário troque na edição
+    if (elPeriodo) elPeriodo.addEventListener("change", atualizarCampos);
+    if (elTipo) elTipo.addEventListener("change", atualizarCampos);
+
+    // --- MÁGICA AQUI ---
+    // Executa ao carregar a página. Como o Django já preenche os 'values' dos inputs,
+    // o JS vai ler o valor que veio do banco e mostrar/esconder as coisas certas imediatamente.
+    atualizarCampos();
+
+    // Máscara de Dinheiro (R$) para edição
+    const inputValor = document.getElementById('id_valor_limite'); 
+    if (inputValor) {
+        // Formata ao carregar (caso venha sem R$)
+        if (inputValor.value && !inputValor.value.includes('R$')) {
+             let val = parseFloat(inputValor.value).toFixed(2).replace('.', ',');
+             inputValor.value = "R$ " + val;
+        }
+
+        inputValor.addEventListener('input', function(e) {
+            let value = e.target.value;
+            value = value.replace(/\D/g, "");
+            value = (value / 100).toFixed(2) + "";
+            value = value.replace(".", ",");
+            value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+            e.target.value = "R$ " + value;
         });
     }
 });

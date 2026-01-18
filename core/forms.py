@@ -280,37 +280,48 @@ class ImportarFaturaForm(forms.Form):
             # Usamos self.fields['nome_do_campo']
             self.fields['cartao'].queryset = CartaoCredito.objects.filter(usuario=user)
 
+
 class MetaMensalForm(forms.ModelForm):
+    # Formatação do valor monetário
     valor_limite = forms.CharField(
-        label="Valor Limite (R$)",
-        widget=forms.TextInput(attrs={
-            'class': 'form-control money-mask', 
-            'placeholder': 'R$ 0,00'
-        })
+        label="Valor da Meta (R$)",
+        widget=forms.TextInput(attrs={'class': 'form-control money-mask', 'placeholder': 'R$ 0,00'})
     )
     
     class Meta:
         model = MetaMensal
-        fields = ['tipo', 'periodo', 'categoria', 'valor_limite']
+        fields = ['descricao', 'tipo', 'periodo', 'data_inicio', 'data_fim', 'categoria', 'valor_limite']
         widgets = {
+            'descricao': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Viagem, Carro Novo...'}),
             'tipo': forms.Select(attrs={'class': 'form-select', 'id': 'id_tipo_meta'}),
-            'periodo': forms.Select(attrs={'class': 'form-select'}),
+            'periodo': forms.Select(attrs={'class': 'form-select', 'id': 'id_periodo_meta'}),
             'categoria': forms.Select(attrs={'class': 'form-select', 'id': 'id_categoria_meta'}),
+            # Inputs de data para abrir o calendário
+            'data_inicio': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'data_fim': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         }
 
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['categoria'].queryset = Categoria.objects.filter(usuario=user, tipo='D')
         self.fields['categoria'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        periodo = cleaned_data.get('periodo')
+        dt_inicio = cleaned_data.get('data_inicio')
+        dt_fim = cleaned_data.get('data_fim')
+
+        # Regra: Se escolher 'Personalizado', é obrigado a por datas
+        if periodo == 'P':
+            if not dt_inicio or not dt_fim:
+                raise forms.ValidationError("Para período personalizado, informe Data Início e Fim.")
+            if dt_inicio > dt_fim:
+                self.add_error('data_fim', "A data final deve ser maior que a inicial.")
         
-        # 🆕 ESCONDE O CAMPO CATEGORIA SE NÃO FOR TIPO 'C'
-        # Isso funciona tanto na criação quanto na edição
-        if self.instance.pk:  # Se está editando
-            if self.instance.tipo != 'C':
-                # Esconde o campo visualmente
-                self.fields['categoria'].widget = forms.HiddenInput()
-                self.fields['categoria'].label = ''
-    
+        return cleaned_data
+
+    # Mantém sua função clean_valor_limite existente...
     def clean_valor_limite(self):
         valor = self.cleaned_data.get('valor_limite')
         if isinstance(valor, str):

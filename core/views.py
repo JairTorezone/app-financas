@@ -1212,9 +1212,7 @@ def alternar_pagamento(request, tipo, id_item):
 #METAS
 @login_required
 def definir_metas(request):
-    from .models import MetaMensal
-    metas = MetaMensal.objects.filter(usuario=request.user).order_by('tipo', 'categoria__nome')
-    
+    # 1. Processa Formulário (POST)
     if request.method == 'POST':
         form = MetaMensalForm(request.user, request.POST)
         if form.is_valid():
@@ -1222,238 +1220,134 @@ def definir_metas(request):
                 meta = form.save(commit=False)
                 meta.usuario = request.user
                 
-                # Regra: Se não for tipo Categoria, limpa o campo categoria
-                if meta.tipo != 'C':
-                    meta.categoria = None
-                    
+                # Limpezas de campos dependendo do tipo
+                if meta.tipo != 'C': meta.categoria = None
+                if meta.periodo != 'P': 
+                    meta.data_inicio = None
+                    meta.data_fim = None
+                
                 meta.save()
-                messages.success(request, "Meta definida com sucesso!")
+                messages.success(request, "Meta salva com sucesso!")
                 return redirect('definir_metas')
             except Exception as e:
-                messages.error(request, "Erro: Talvez você já tenha uma meta para este item.")
+                messages.error(request, f"Erro ao salvar: {e}")
+        else:
+            messages.error(request, "Verifique os erros no formulário.")
     else:
         form = MetaMensalForm(request.user)
 
-    return render(request, 'core/definir_metas.html', {
-        'form': form,
-        'metas': metas
-    })
+    # 2. Prepara os dados para exibição
+    metas_banco = MetaMensal.objects.filter(usuario=request.user).order_by('periodo', 'categoria__nome')
+    
+    # Estruturas para o Dashboard
+    poupanca_display = []
+    gastos_display = []
+    
+    # Agrupamento temporário
+    temp_agrupamento = {
+        'poupanca': {'M': [], 'T': [], 'S': [], 'A': [], 'P': []},
+        'gastos':   {'M': [], 'T': [], 'S': [], 'A': [], 'P': []}
+    }
+    
+    # Lista plana processada para a tabela do rodapé
+    todas_metas_processadas = []
 
-@login_required
-def excluir_meta(request, id_meta):
-    meta = get_object_or_404(MetaMensal, id=id_meta, usuario=request.user)
-    meta.delete()
-    messages.success(request, "Meta removida.")
-    return redirect('definir_metas')
-
-@login_required
-def acompanhar_metas(request):
-    import calendar
-    from .models import MetaMensal
-    
-    hoje = date.today()
-    mes_atual = hoje.month
-    ano_atual = hoje.year
-    
-    ultimo_dia_mes = calendar.monthrange(ano_atual, mes_atual)[1]
-    inicio_mes = date(ano_atual, mes_atual, 1)
-    fim_mes = date(ano_atual, mes_atual, ultimo_dia_mes)
-    
-    inicio_ano = date(ano_atual, 1, 1)
-    fim_ano = date(ano_atual, 12, 31)
-
-    metas_definidas = MetaMensal.objects.filter(usuario=request.user).select_related('categoria')
-    relatorio_metas = []
-    
-    # Pré-cálculos
-    cartao_mes = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
-    cartao_ano = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
-    
-    rec_mes = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
-    desp_mes = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
-    
-    rec_ano = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
-    desp_ano = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
-
-    saldo_mes = rec_mes - (desp_mes + cartao_mes)
-    saldo_ano = rec_ano - (desp_ano + cartao_ano)
-
-    for meta in metas_definidas:
-        gasto_atual = 0
-        is_savings = False 
-        
-        d_inicio = inicio_mes if meta.periodo == 'M' else inicio_ano
-        d_fim = fim_mes if meta.periodo == 'M' else fim_ano
-        
-        if meta.tipo == 'C' and meta.categoria:
-            gasto_atual = Transacao.objects.filter(
-                usuario=request.user, categoria=meta.categoria, data__range=[d_inicio, d_fim]
-            ).aggregate(Sum('valor'))['valor__sum'] or 0
-            label = f"{meta.categoria.nome} ({meta.get_periodo_display()})"
-
-        elif meta.tipo == 'K':
-            gasto_atual = cartao_mes if meta.periodo == 'M' else cartao_ano
-            label = f"Total Cartões ({meta.get_periodo_display()})"
-
-        elif meta.tipo == 'E':
-            gasto_atual = saldo_mes if meta.periodo == 'M' else saldo_ano
-            label = f"Economia/Saldo ({meta.get_periodo_display()})"
-            is_savings = True  # 🆕 MARCA COMO ECONOMIA
-            
-        elif meta.tipo == 'G':
-            d_conta = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
-            c_val = cartao_mes if meta.periodo == 'M' else cartao_ano
-            gasto_atual = d_conta + c_val
-            label = f"Orçamento Global ({meta.get_periodo_display()})"
-
-        # Cálculo de porcentagem
-        if meta.valor_limite > 0:
-            porcentagem = (gasto_atual / meta.valor_limite) * 100
-        else:
-            porcentagem = 0
-            
-        # 🔥 LÓGICA DE CORES CORRIGIDA
-        cor_classe = ""
-        cor_style = ""
-        msg_limite = ""
-
-        if is_savings:
-            # ECONOMIA: Verde quando atingir 100%+
-            if porcentagem >= 100:
-                cor_classe = "bg-success"  # Verde
-                msg_limite = "Meta Atingida! 🏆"
-            elif porcentagem >= 50:
-                cor_classe = "bg-warning"  # Amarelo
-            else:
-                cor_classe = "bg-danger"   # Vermelho
-        else:
-            # DESPESAS: Verde quando gastar pouco
-            if porcentagem >= 100:
-                cor_classe = "bg-danger"   # Vermelho
-                msg_limite = "Limite Excedido!"
-            elif porcentagem >= 75:
-                cor_classe = "bg-warning"  # Laranja
-                cor_style = "background-color: #fd7e14 !important;"
-            elif porcentagem >= 50:
-                cor_classe = "bg-warning"  # Amarelo
-            else:
-                cor_classe = "bg-success"  # Verde
-
-        relatorio_metas.append({
-            'id': meta.id,
-            'label': label,
-            'limite': meta.valor_limite,
-            'gasto': gasto_atual,
-            'porcentagem_visual': min(porcentagem, 100),
-            'porcentagem_real': porcentagem,
-            'cor_classe': cor_classe,
-            'cor_style': cor_style,
-            'msg': msg_limite,
-            'is_savings': is_savings  # 🆕 Passa pro template
-        })
-
-    return render(request, 'core/acompanhar_metas.html', {'metas': relatorio_metas})
-
-@login_required
-def definir_metas(request):
-    import calendar
-    from .models import MetaMensal
-    
-    # 1. Processamento do Formulário (POST)
-    if request.method == 'POST':
-        form = MetaMensalForm(request.user, request.POST)
-        if form.is_valid():
-            try:
-                meta = form.save(commit=False)
-                meta.usuario = request.user
-                
-                # Regra de limpeza de categoria
-                if meta.tipo != 'C':
-                    meta.categoria = None
-                
-                meta.save()
-                messages.success(request, "✅ Meta definida com sucesso!")
-                return redirect('definir_metas')
-            except Exception as e:
-                messages.error(request, "⚠️ Erro: Talvez você já tenha uma meta desse tipo/período.")
-        else:
-            messages.error(request, "Erro no formulário. Verifique os campos.")
-    else:
-        form = MetaMensalForm(request.user)
-
-    # 2. Cálculos para o Dashboard (Sempre roda, GET ou POST)
-    metas_banco = MetaMensal.objects.filter(usuario=request.user).order_by('periodo', 'tipo')
-    
-    hoje = date.today()
-    mes_atual = hoje.month
-    ano_atual = hoje.year
-    
-    # Datas
-    ultimo_dia_mes = calendar.monthrange(ano_atual, mes_atual)[1]
-    inicio_mes = date(ano_atual, mes_atual, 1)
-    fim_mes = date(ano_atual, mes_atual, ultimo_dia_mes)
-    inicio_ano = date(ano_atual, 1, 1)
-    fim_ano = date(ano_atual, 12, 31)
-    
-    # Agregações Globais (Para evitar muitas consultas)
-    cartao_mes = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
-    cartao_ano = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
-    
-    rec_mes = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
-    desp_mes = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[inicio_mes, fim_mes]).aggregate(Sum('valor'))['valor__sum'] or 0
-    rec_ano = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
-    desp_ano = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[inicio_ano, fim_ano]).aggregate(Sum('valor'))['valor__sum'] or 0
-    
-    saldo_mes = rec_mes - (desp_mes + cartao_mes)
-    saldo_ano = rec_ano - (desp_ano + cartao_ano)
-    
-    metas_com_progresso = []
-    
     for meta in metas_banco:
-        d_inicio = inicio_mes if meta.periodo == 'M' else inicio_ano
-        d_fim = fim_mes if meta.periodo == 'M' else fim_ano
-        
+        d_inicio, d_fim = calcular_intervalo_meta(meta)
         gasto_atual = 0
         is_savings = False
         
+        # --- Lógica de Cálculo ---
         if meta.tipo == 'C' and meta.categoria:
             gasto_atual = Transacao.objects.filter(usuario=request.user, categoria=meta.categoria, data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            label = meta.categoria.nome
         elif meta.tipo == 'K':
-            gasto_atual = cartao_mes if meta.periodo == 'M' else cartao_ano
+            gasto_atual = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            label = "Total Cartões"
         elif meta.tipo == 'E':
-            gasto_atual = saldo_mes if meta.periodo == 'M' else saldo_ano
+            rec = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            desp = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            cart = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            gasto_atual = rec - (desp + cart)
+            label = "Economia / Guardar"
             is_savings = True
         elif meta.tipo == 'G':
             d_conta = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
-            c_val = cartao_mes if meta.periodo == 'M' else cartao_ano
+            c_val = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
             gasto_atual = d_conta + c_val
+            label = "Orçamento Global"
 
-        # Porcentagem
+        if meta.descricao: label = meta.descricao
+
+        # Porcentagem e Cores
         porcentagem = (gasto_atual / meta.valor_limite * 100) if meta.valor_limite > 0 else 0
+        msg = ""
+        cor_classe = "bg-success"
         
-        # Cores
-        cor_classe = ""
         if is_savings:
-            if porcentagem >= 100: cor_classe = 'bg-success'
-            elif porcentagem >= 50: cor_classe = 'bg-warning'
-            else: cor_classe = 'bg-danger'
+            if porcentagem >= 100: 
+                cor_classe = "bg-success"
+                msg = "Atingida! 🏆"
+            elif porcentagem < 50: cor_classe = "bg-danger"
+            else: cor_classe = "bg-warning"
         else:
-            if porcentagem >= 100: cor_classe = 'bg-danger'
-            elif porcentagem >= 75: cor_classe = 'bg-warning' # Laranja visual via CSS depois se quiser
-            elif porcentagem >= 50: cor_classe = 'bg-warning'
-            else: cor_classe = 'bg-success'
+            if porcentagem > 100: 
+                cor_classe = "bg-danger"
+                msg = "Excedeu!"
+            elif porcentagem >= 80: cor_classe = "bg-warning"
 
-        # Atribui ao objeto temporário
-        meta.gasto_atual = gasto_atual
-        meta.porcentagem = porcentagem
-        meta.cor_classe = cor_classe
-        meta.is_savings = is_savings
+        # Preenche objeto meta temporário
+        meta.temp_label = label
+        meta.temp_gasto = gasto_atual
+        meta.temp_perc_real = porcentagem
+        meta.temp_perc_visual = min(porcentagem, 100)
+        meta.temp_cor = cor_classe
+        meta.temp_msg = msg
+        meta.temp_is_savings = is_savings
         
-        metas_com_progresso.append(meta)
+        if meta.periodo == 'P' and meta.data_inicio:
+            meta.temp_datas = f"{meta.data_inicio.strftime('%d/%m')} a {meta.data_fim.strftime('%d/%m')}"
+        else:
+            meta.temp_datas = meta.get_periodo_display()
+
+        # Adiciona aos grupos
+        chave = 'poupanca' if is_savings else 'gastos'
+        temp_agrupamento[chave][meta.periodo].append(meta)
+        todas_metas_processadas.append(meta)
+
+    # 3. Transforma dicionário em listas ordenadas para o Template
+    titulos = {'M': 'Mensais', 'T': 'Trimestrais', 'S': 'Semestrais', 'A': 'Anuais', 'P': 'Personalizadas'}
+    
+    # Cores dos Títulos (Bootstrap Classes)
+    cores_titulos = {
+        'M': 'text-primary',   # Azul
+        'T': 'text-warning',   # Amarelo/Laranja
+        'S': 'text-info',      # Ciano
+        'A': 'text-success',   # Verde
+        'P': 'text-dark'       # Preto
+    }
+    
+    ordem = ['M', 'T', 'S', 'A', 'P']
+
+    for sigla in ordem:
+        if temp_agrupamento['poupanca'][sigla]:
+            poupanca_display.append({
+                'titulo': titulos[sigla], 
+                'lista': temp_agrupamento['poupanca'][sigla],
+                'cor_titulo': cores_titulos[sigla]
+            })
+        if temp_agrupamento['gastos'][sigla]:
+            gastos_display.append({
+                'titulo': titulos[sigla], 
+                'lista': temp_agrupamento['gastos'][sigla],
+                'cor_titulo': cores_titulos[sigla]
+            })
 
     return render(request, 'core/definir_metas.html', {
-        'form': form, 
-        'metas': metas_com_progresso # Passa a lista processada!
+        'form': form,
+        'poupanca_display': poupanca_display,
+        'gastos_display': gastos_display,
+        'metas': todas_metas_processadas # Lista completa para o rodapé
     })
 
 @login_required
@@ -1485,6 +1379,12 @@ def editar_meta(request, id_meta):
         'form': form,
         'meta': meta # Passar o objeto meta pode ser útil para exibir o título
     })
+
+def excluir_meta(request, id_meta):
+    meta = get_object_or_404(MetaMensal, id=id_meta, usuario=request.user)
+    meta.delete()
+    messages.success(request, "Meta removida.")
+    return redirect('definir_metas')
 
 @login_required
 def pagar_categoria_inteira(request, categoria_id, mes, ano):
@@ -1518,3 +1418,116 @@ def pagar_categoria_inteira(request, categoria_id, mes, ano):
     
     # Retorna para a home no mesmo mês
     return redirect(f'/?mes={mes}&ano={ano}')
+
+def calcular_intervalo_meta(meta):
+    """Define data de início e fim baseada no tipo de período."""
+    hoje = date.today()
+    ano = hoje.year
+    mes = hoje.month
+
+    # Personalizado: Usa o que o usuário escolheu
+    if meta.periodo == 'P':
+        inicio = meta.data_inicio or date(ano, mes, 1)
+        fim = meta.data_fim or date(ano, mes, calendar.monthrange(ano, mes)[1])
+        return inicio, fim
+
+    # Mensal: Mês Atual
+    elif meta.periodo == 'M':
+        ultimo_dia = calendar.monthrange(ano, mes)[1]
+        return date(ano, mes, 1), date(ano, mes, ultimo_dia)
+
+    # Trimestral: Trimestre Atual
+    elif meta.periodo == 'T':
+        trimestre = (mes - 1) // 3 + 1
+        mes_inicio = (trimestre - 1) * 3 + 1
+        mes_fim = mes_inicio + 2
+        ultimo_dia = calendar.monthrange(ano, mes_fim)[1]
+        return date(ano, mes_inicio, 1), date(ano, mes_fim, ultimo_dia)
+
+    # Semestral: Semestre Atual
+    elif meta.periodo == 'S':
+        if mes <= 6:
+            return date(ano, 1, 1), date(ano, 6, 30)
+        else:
+            return date(ano, 7, 1), date(ano, 12, 31)
+
+    # Anual: Ano Atual
+    elif meta.periodo == 'A':
+        return date(ano, 1, 1), date(ano, 12, 31)
+
+    return hoje, hoje
+
+@login_required
+def acompanhar_metas(request):
+    metas_banco = MetaMensal.objects.filter(usuario=request.user)
+    relatorio_metas = []
+
+    for meta in metas_banco:
+        # USA A FUNÇÃO AUXILIAR PARA PEGAR AS DATAS CERTAS
+        d_inicio, d_fim = calcular_intervalo_meta(meta)
+        
+        gasto_atual = 0
+        is_savings = False
+
+        # --- QUERYSETS FILTRANDO PELO INTERVALO (d_inicio, d_fim) ---
+        if meta.tipo == 'C' and meta.categoria:
+            gasto_atual = Transacao.objects.filter(
+                usuario=request.user, 
+                categoria=meta.categoria, 
+                data__range=[d_inicio, d_fim]
+            ).aggregate(Sum('valor'))['valor__sum'] or 0
+            
+            # Label usa a descrição se existir, senão o nome da categoria
+            nome_display = meta.descricao if meta.descricao else meta.categoria.nome
+
+        elif meta.tipo == 'K':
+            gasto_atual = CompraCartao.objects.filter(
+                cartao__usuario=request.user, 
+                data_compra__range=[d_inicio, d_fim]
+            ).aggregate(Sum('valor'))['valor__sum'] or 0
+            nome_display = meta.descricao if meta.descricao else "Total Cartões"
+
+        elif meta.tipo == 'E':
+            # Economia = Receitas - (Despesas + Cartão) no período
+            rec = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            desp = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            cart = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            
+            gasto_atual = rec - (desp + cart)
+            nome_display = meta.descricao if meta.descricao else "Economia / Guardar"
+            is_savings = True
+
+        elif meta.tipo == 'G':
+            # Global = Despesas + Cartão
+            d_conta = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', data__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            c_val = CompraCartao.objects.filter(cartao__usuario=request.user, data_compra__range=[d_inicio, d_fim]).aggregate(Sum('valor'))['valor__sum'] or 0
+            gasto_atual = d_conta + c_val
+            nome_display = meta.descricao if meta.descricao else "Orçamento Global"
+
+        # Cálculos Finais
+        porcentagem = (gasto_atual / meta.valor_limite * 100) if meta.valor_limite > 0 else 0
+        
+        # Cores (Lógica simplificada)
+        cor_classe = "bg-success"
+        if not is_savings:
+            if porcentagem >= 100: cor_classe = "bg-danger"
+            elif porcentagem >= 75: cor_classe = "bg-warning"
+
+        # String legível do período
+        if meta.periodo == 'P' and meta.data_inicio:
+            texto_periodo = f"{meta.data_inicio.strftime('%d/%m')} a {meta.data_fim.strftime('%d/%m')}"
+        else:
+            texto_periodo = meta.get_periodo_display()
+
+        relatorio_metas.append({
+            'label': nome_display,
+            'texto_periodo': texto_periodo,
+            'limite': meta.valor_limite,
+            'gasto': gasto_atual,
+            'porcentagem_visual': min(porcentagem, 100),
+            'porcentagem_real': porcentagem,
+            'cor_classe': cor_classe,
+            'is_savings': is_savings
+        })
+
+    return render(request, 'core/acompanhar_metas.html', {'metas': relatorio_metas})

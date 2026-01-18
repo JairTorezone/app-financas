@@ -94,22 +94,34 @@ class MetaMensal(models.Model):
         ('C', 'Por Categoria'),
         ('K', 'Cartão(ões) de Crédito'),
         ('E', 'Economia (Guardar)'),
-        ('G', 'Orçamento Global (Teto de Gastos)'), # Novo
+        ('G', 'Orçamento Global (Teto de Gastos)'),
     )
     
     PERIODO_CHOICES = (
         ('M', 'Mensal (Mês Atual)'),
+        ('T', 'Trimestral (Trimestre Atual)'), # Novo
+        ('S', 'Semestral (Semestre Atual)'),   # Novo
         ('A', 'Anual (Ano Atual)'),
+        ('P', 'Personalizado (Data Específica)'), # Novo para escolher datas
     )
 
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    # Campo novo para dar nome (Ex: Viagem Disney)
+    descricao = models.CharField(max_length=50, null=True, blank=True, verbose_name="Nome da Meta")
+    
     tipo = models.CharField(max_length=1, choices=TIPO_CHOICES, default='C')
     periodo = models.CharField(max_length=1, choices=PERIODO_CHOICES, default='M', verbose_name="Período")
+    
+    # Campos novos para guardar as datas escolhidas
+    data_inicio = models.DateField(null=True, blank=True, verbose_name="Início")
+    data_fim = models.DateField(null=True, blank=True, verbose_name="Fim")
+    
     categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, null=True, blank=True)
     valor_limite = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor da Meta")
     
     class Meta:
-        unique_together = ('usuario', 'tipo', 'categoria', 'periodo')
+        # Removemos o unique_together antigo pois agora as datas variam
+        pass 
 
     def __str__(self):
-        return f"{self.get_tipo_display()} - {self.valor_limite}"
+        return f"{self.descricao or self.get_tipo_display()} - {self.valor_limite}"
