@@ -280,7 +280,6 @@ class ImportarFaturaForm(forms.Form):
             # Usamos self.fields['nome_do_campo']
             self.fields['cartao'].queryset = CartaoCredito.objects.filter(usuario=user)
 
-
 class MetaMensalForm(forms.ModelForm):
     # Formatação do valor monetário
     valor_limite = forms.CharField(

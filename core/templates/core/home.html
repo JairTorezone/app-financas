@@ -35,7 +35,7 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a class="dropdown-item text-success" href="{% url 'copiar_receitas_fixas' %}?mes={{ mes_atual }}&ano={{ ano_atual }}" onclick="return confirm('Copiar receitas FIXAS do mês passado?');">
+                    <a class="dropdown-item text-success" href="{% url 'selecionar_copia_mensal' 'receita' %}?mes={{ mes_atual }}&ano={{ ano_atual }}">
                         <i class="fas fa-sync-alt me-2"></i> Copiar do Mês Anterior
                     </a>
                 </li>
@@ -74,7 +74,7 @@
                 </li>
                 
                 <li>
-                    <a class="dropdown-item text-info" href="{% url 'copiar_despesas_fixas' %}?mes={{ mes_atual }}&ano={{ ano_atual }}" onclick="return confirm('Deseja copiar todas as despesas FIXAS do mês passado para este mês?');">
+                    <a class="dropdown-item text-info" href="{% url 'selecionar_copia_mensal' 'despesa' %}?mes={{ mes_atual }}&ano={{ ano_atual }}">
                         <i class="fas fa-sync-alt me-2"></i> Copiar Fixas (Mês Anterior)
                     </a>
                 </li>

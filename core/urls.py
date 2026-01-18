@@ -46,4 +46,6 @@ urlpatterns = [
     path('metas/definir/', views.definir_metas, name='definir_metas'),
     path('metas/editar/<int:id_meta>/', views.editar_meta, name='editar_meta'),
     path('pagar-categoria/<int:categoria_id>/<int:mes>/<int:ano>/', views.pagar_categoria_inteira, name='pagar_categoria_inteira'),
+    path('copiar-mensal/<str:tipo>/', views.selecionar_copia_mensal, name='selecionar_copia_mensal'),
+
 ]

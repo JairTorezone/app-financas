@@ -911,6 +911,7 @@ def editar_item_config(request, tipo, id_item):
         'titulo': f'Editar {tipo.capitalize()}'
     })
 
+#COPIAR DESPESAS OU RECEITAS MES ANTERIOR
 @login_required
 def copiar_despesas_fixas(request):
     # 1. Pega o mês/ano de DESTINO (que está na URL ou é o atual)
@@ -1028,6 +1029,110 @@ def copiar_receitas_fixas(request):
         messages.info(request, "Receitas já foram copiadas.")
 
     return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
+
+@login_required
+def selecionar_copia_mensal(request, tipo):
+    """
+    Tela intermediária para copiar Receitas (R) ou Despesas (D) fixas do mês anterior.
+    tipo: 'receita' ou 'despesa'
+    """
+    import calendar
+    from dateutil.relativedelta import relativedelta
+    
+    # 1. Definições de Data e Tipo
+    try:
+        mes_atual = int(request.GET.get('mes', date.today().month))
+        ano_atual = int(request.GET.get('ano', date.today().year))
+    except:
+        mes_atual = date.today().month
+        ano_atual = date.today().year
+
+    data_atual = date(ano_atual, mes_atual, 1)
+    data_anterior = data_atual - relativedelta(months=1)
+    
+    tipo_db = 'R' if tipo == 'receita' else 'D'
+    titulo = "Copiar Receitas Fixas" if tipo == 'receita' else "Copiar Despesas Fixas"
+
+    # --- PROCESSAMENTO DO POST (QUANDO O USUÁRIO CLICA EM CONFIRMAR) ---
+    if request.method == 'POST':
+        ids_selecionados = request.POST.getlist('ids_transacoes')
+        
+        if not ids_selecionados:
+            messages.warning(request, "Nenhum item selecionado para cópia.")
+            return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
+
+        # Busca apenas os itens originais que o usuário marcou e que pertencem a ele
+        itens_originais = Transacao.objects.filter(
+            id__in=ids_selecionados, 
+            usuario=request.user
+        )
+
+        copiados = 0
+        for item in itens_originais:
+            # Lógica de Data Segura (Ex: Copiar dia 31/01 para Fevereiro vira dia 28/02)
+            dia_original = item.data.day
+            ultimo_dia_mes_novo = calendar.monthrange(ano_atual, mes_atual)[1]
+            
+            # Se o dia original for maior que o último dia do mês novo, usa o último dia
+            dia_novo = min(dia_original, ultimo_dia_mes_novo)
+            nova_data = date(ano_atual, mes_atual, dia_novo)
+
+            # Cria a cópia
+            Transacao.objects.create(
+                usuario=request.user,
+                categoria=item.categoria,
+                descricao=item.descricao,
+                valor=item.valor,
+                tipo_custo='F', # Mantém como Fixa
+                observacao=f"Copiado de {data_anterior.strftime('%m/%Y')}",
+                data=nova_data,
+                pago=False, # Nasce como não pago/recebido
+                data_pagamento=None
+            )
+            copiados += 1
+
+        messages.success(request, f"{copiados} itens copiados com sucesso para {data_atual.strftime('%m/%Y')}!")
+        return redirect(f"/?mes={mes_atual}&ano={ano_atual}")
+
+    # --- EXIBIÇÃO DA LISTA (GET) ---
+    
+    # Busca itens FIXOS do mês ANTERIOR
+    itens_anterior = Transacao.objects.filter(
+        usuario=request.user,
+        categoria__tipo=tipo_db,
+        tipo_custo='F',
+        data__month=data_anterior.month,
+        data__year=data_anterior.year
+    ).order_by('data')
+
+    # Verifica se já existe algo parecido no mês ATUAL para avisar o usuário (Opcional visual)
+    # Criamos uma lista de descrições que já existem no mês atual
+    descricoes_existentes = Transacao.objects.filter(
+        usuario=request.user,
+        categoria__tipo=tipo_db,
+        data__month=mes_atual,
+        data__year=ano_atual
+    ).values_list('descricao', flat=True)
+
+    # Monta uma lista de objetos para o template, adicionando flag se já existe
+    lista_para_copia = []
+    for item in itens_anterior:
+        ja_existe = item.descricao in descricoes_existentes
+        lista_para_copia.append({
+            'obj': item,
+            'ja_existe': ja_existe # Se True, podemos desmarcar o checkbox no template
+        })
+
+    context = {
+        'lista': lista_para_copia,
+        'mes_atual': mes_atual,
+        'ano_atual': ano_atual,
+        'mes_anterior_str': data_anterior.strftime('%B/%Y'), # Ex: Janeiro/2026
+        'tipo': tipo,
+        'titulo': titulo
+    }
+
+    return render(request, 'core/copiar_mensal.html', context)
 
 @login_required
 def importar_fatura(request):
