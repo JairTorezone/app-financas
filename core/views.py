@@ -86,7 +86,7 @@ def home(request):
 
     # --- 3. Listas Detalhadas ---
     
-    # Lista de Receitas: ADICIONADO 'categoria__id' no values()
+    # Lista de Receitas
     receitas_detalhadas = Transacao.objects.filter(
         usuario=request.user, 
         categoria__tipo='R', 
@@ -95,7 +95,7 @@ def home(request):
      .annotate(total=Sum('valor'))\
      .order_by('-total')
 
-    # Lista de Despesas (Banco): ADICIONADO 'categoria__id' no values()
+    # Lista de Despesas (Banco)
     despesas_query = Transacao.objects.filter(
         usuario=request.user, 
         categoria__tipo='D', 
@@ -103,12 +103,13 @@ def home(request):
     ).values('categoria__nome', 'categoria__id')\
      .annotate(
          total=Sum('valor'),
-         pendentes=Count('id', filter=Q(pago=False)) # <--- NOVO: Conta quantos não foram pagos
+         pendentes=Count('id', filter=Q(pago=False))
      )
     
     lista_despesas = list(despesas_query)
 
     # Adiciona o total do cartão como uma "categoria"
+    # ATENÇÃO: Este item NÃO tem 'categoria__id'
     if total_cartao > 0:
         lista_despesas.append({
             'categoria__nome': 'Cartão de Crédito',
@@ -122,7 +123,71 @@ def home(request):
     tem_cartoes = CartaoCredito.objects.filter(usuario=request.user).exists()
     ultimo_dia = calendar.monthrange(ano_atual, mes_atual)[1]
 
-    # --- 4. Contexto Final ---
+    # --- 4. Lógica de Alertas Inteligentes (CORRIGIDA) ---
+    alertas = []
+    hoje = date.today()
+    
+    if mes_atual == hoje.month and ano_atual == hoje.year:
+        dia_hoje = hoje.day
+        
+        # Mapa de gastos (ignora cartão global da lista)
+        mapa_gastos = {item['categoria__id']: item['total'] for item in lista_despesas if 'categoria__id' in item}
+        
+        metas_atuais = MetaMensal.objects.filter(
+            usuario=request.user, 
+            periodo='M'
+        ).select_related('categoria')
+
+        for meta in metas_atuais:
+            gasto_real = 0
+            nome_meta = ""
+
+            if meta.tipo == 'C' and meta.categoria:
+                gasto_real = mapa_gastos.get(meta.categoria.id, 0)
+                nome_meta = meta.categoria.nome
+            elif meta.tipo == 'K': 
+                gasto_real = total_cartao
+                nome_meta = "Cartão de Crédito"
+            elif meta.tipo == 'G':
+                gasto_real = total_despesas_geral
+                nome_meta = "Orçamento Global"
+            
+            if meta.descricao:
+                nome_meta = meta.descricao
+
+            if meta.valor_limite > 0 and nome_meta:
+                percentual = (gasto_real / meta.valor_limite) * 100
+                
+                # Formata valor para R$ XX.XXX,XX
+                valor_meta_fmt = f"{meta.valor_limite:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                
+                # Texto padrão do final da mensagem
+                msg_final = f"({int(percentual)}% da meta R$ {valor_meta_fmt})"
+
+                # Caso 1: Estourou
+                if percentual >= 100:
+                    alertas.append({
+                        'nivel': 'danger',
+                        'icone': 'fas fa-exclamation-circle',
+                        'texto': f"Você já estourou a meta de <strong>{nome_meta}</strong> {msg_final}."
+                    })
+                
+                # Caso 2: Gasto Acelerado
+                elif percentual >= 70 and dia_hoje < 20:
+                    alertas.append({
+                        'nivel': 'warning',
+                        'icone': 'fas fa-stopwatch',
+                        'texto': f"Cuidado: Você já usou {int(percentual)}% da meta de <strong>{nome_meta}</strong>. {msg_final}"
+                    })
+                
+                # Caso 3: Perto do Limite
+                elif percentual >= 90:
+                     alertas.append({
+                        'nivel': 'warning',
+                        'icone': 'fas fa-exclamation-triangle',
+                        'texto': f"Atenção: A meta de <strong>{nome_meta}</strong> está no limite {msg_final}."
+                    })
+    # --- 5. Contexto Final ---
     contexto = {
         'mes_atual': mes_atual,
         'ano_atual': ano_atual,
@@ -142,7 +207,8 @@ def home(request):
         # Listas
         'lista_receitas': receitas_detalhadas,
         'lista_despesas': lista_despesas,
-        'tem_cartoes': tem_cartoes
+        'tem_cartoes': tem_cartoes,
+        'alertas': alertas, # Alertas processados
     }
 
     return render(request, 'core/home.html', contexto)

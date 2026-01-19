@@ -21,6 +21,20 @@
         
         <input type="number" name="ano" value="{{ ano_atual }}" class="form-control border-0 bg-light" style="width: 80px;" onchange="this.form.submit()">
     </form>
+
+    {% if alertas %}
+    <div class="mb-4">
+        {% for alerta in alertas %}
+        <div class="alert alert-{{ alerta.nivel }} alert-dismissible fade show shadow-sm border-{{ alerta.nivel }} d-flex align-items-center" role="alert">
+            <i class="{{ alerta.icone }} fa-lg me-3"></i>
+            <div>
+                {{ alerta.texto|safe }}
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     
     <div class="d-flex gap-2">
        <div class="dropdown">
@@ -195,7 +209,7 @@
             </ul>
             {% if lista_receitas|length > 4 %}
             <div class="card-footer text-center bg-white">
-                <button class="btn btn-sm btn-outline-secondary" onclick="toggleLista('receita')">Ver mais</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleLista('receita', this)">Ver mais</button>
             </div>
             {% endif %}
         </div>
@@ -251,16 +265,17 @@
             </ul>
 
             {% if lista_despesas|length > 4 %}
-            <div class="card-footer text-center bg-white">
-                <button class="btn btn-sm btn-outline-secondary" onclick="toggleLista('despesa')">Ver mais</button>
+           <div class="card-footer text-center bg-white">
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleLista('despesa', this)">Ver mais</button>
             </div>
-            {% endif %}
+        {% endif %}
         </div>
     </div>
 </div>
 
 <script>
-    function toggleLista(tipo) {
+    function toggleLista(tipo, btn) {
+        // 1. Alterna a visibilidade dos itens
         const itens = document.querySelectorAll(`.item-extra-${tipo}`);
         itens.forEach(item => {
             if (item.classList.contains('d-none')) {
@@ -269,6 +284,14 @@
                 item.classList.add('d-none');
             }
         });
+
+        // 2. Alterna o texto do botão
+        // Se o texto atual contém "Ver mais", troca para "Ver menos", e vice-versa
+        if (btn.innerText.includes("Ver mais")) {
+            btn.innerText = "Ver menos";
+        } else {
+            btn.innerText = "Ver mais";
+        }
     }
 </script>
 
