@@ -187,6 +187,53 @@ def home(request):
                         'icone': 'fas fa-exclamation-triangle',
                         'texto': f"Atenção: A meta de <strong>{nome_meta}</strong> está no limite {msg_final}."
                     })
+    
+
+    # --- 5. GRÁFICOS ---
+    grafico_rosca_labels = []
+    grafico_rosca_data = []
+    
+    for item in lista_despesas:
+        # Pega o nome (ex: Alimentação) e o valor
+        grafico_rosca_labels.append(item['categoria__nome'])
+        grafico_rosca_data.append(float(item['total']))
+
+    # 2. Dados para o Gráfico de Barras (Histórico 6 Meses)
+    historico_labels = []   # Ex: ['Ago', 'Set', 'Out', ...]
+    historico_receitas = [] # Ex: [5000, 5200, ...]
+    historico_despesas = [] # Ex: [4000, 3000, ...]
+
+    data_base = date.today()
+    
+    # Loop pelos últimos 6 meses (do mais antigo para o atual)
+    for i in range(5, -1, -1):
+        data_passado = data_base - relativedelta(months=i)
+        mes_p = data_passado.month
+        ano_p = data_passado.year
+        
+        # Filtros para aquele mês específico
+        filtro_p = {'data__month': mes_p, 'data__year': ano_p}
+        filtro_cartao_p = {'data_compra__month': mes_p, 'data_compra__year': ano_p}
+        
+        # Soma Receitas
+        rec = Transacao.objects.filter(usuario=request.user, categoria__tipo='R', **filtro_p).aggregate(Sum('valor'))['valor__sum'] or 0
+        
+        # Soma Despesas (Conta + Cartão)
+        desp_conta = Transacao.objects.filter(usuario=request.user, categoria__tipo='D', **filtro_p).aggregate(Sum('valor'))['valor__sum'] or 0
+        desp_cartao = CompraCartao.objects.filter(cartao__usuario=request.user, **filtro_cartao_p).aggregate(Sum('valor'))['valor__sum'] or 0
+        
+        total_desp = desp_conta + desp_cartao
+        
+        # Nome do Mês Abreviado (Jan, Fev...)
+        nome_mes = data_passado.strftime('%b').capitalize() # Requer locale configurado ou fazer manual
+        # Se preferir manual para garantir PT-BR sem configurar locale do servidor:
+        nomes_meses_pt = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+        nome_mes = nomes_meses_pt[mes_p]
+
+        historico_labels.append(nome_mes)
+        historico_receitas.append(float(rec))
+        historico_despesas.append(float(total_desp))
+                
     # --- 5. Contexto Final ---
     contexto = {
         'mes_atual': mes_atual,
@@ -208,7 +255,14 @@ def home(request):
         'lista_receitas': receitas_detalhadas,
         'lista_despesas': lista_despesas,
         'tem_cartoes': tem_cartoes,
-        'alertas': alertas, # Alertas processados
+        'alertas': alertas, 
+
+        # Gráficos (Dump para JSON string segura)
+        'rosca_labels': json.dumps(grafico_rosca_labels),
+        'rosca_data': json.dumps(grafico_rosca_data),
+        'barras_labels': json.dumps(historico_labels),
+        'barras_receitas': json.dumps(historico_receitas),
+        'barras_despesas': json.dumps(historico_despesas),
     }
 
     return render(request, 'core/home.html', contexto)

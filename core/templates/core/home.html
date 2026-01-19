@@ -271,6 +271,99 @@
         {% endif %}
         </div>
     </div>
+
+    <!-- Graficos  -->
+     <div class="row mb-4">
+    <div class="col-md-5 mb-3 mb-md-0">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-chart-pie text-primary me-2"></i>Gastos por Categoria
+            </div>
+            <div class="card-body">
+                <canvas id="chartRosca" style="max-height: 250px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-chart-bar text-success me-2"></i>Evolução Financeira (6 Meses)
+            </div>
+            <div class="card-body">
+                <canvas id="chartBarras" style="max-height: 250px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // --- 1. Gráfico de Rosca (Categorias) ---
+        const ctxRosca = document.getElementById('chartRosca').getContext('2d');
+        const dadosRosca = {
+            labels: {{ rosca_labels|safe }},
+            datasets: [{
+                data: {{ rosca_data|safe }},
+                backgroundColor: [
+                    '#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff', '#ff9f40', '#c9cbcf',
+                    '#28a745', '#dc3545', '#007bff', '#6610f2', '#fd7e14'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        new Chart(ctxRosca, {
+            type: 'doughnut',
+            data: dadosRosca,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+                }
+            }
+        });
+
+        // --- 2. Gráfico de Barras (Histórico) ---
+        const ctxBarras = document.getElementById('chartBarras').getContext('2d');
+        const dadosBarras = {
+            labels: {{ barras_labels|safe }},
+            datasets: [
+                {
+                    label: 'Receitas',
+                    data: {{ barras_receitas|safe }},
+                    backgroundColor: '#198754', // Verde Success
+                    borderRadius: 4
+                },
+                {
+                    label: 'Despesas',
+                    data: {{ barras_despesas|safe }},
+                    backgroundColor: '#dc3545', // Vermelho Danger
+                    borderRadius: 4
+                }
+            ]
+        };
+
+        new Chart(ctxBarras, {
+            type: 'bar',
+            data: dadosBarras,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [2, 2] } },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { position: 'top' }
+                }
+            }
+        });
+    });
+</script>
 </div>
 
 <script>
